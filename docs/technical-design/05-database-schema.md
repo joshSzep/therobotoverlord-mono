@@ -58,10 +58,11 @@ CREATE TABLE posts (
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Used for chronological display ordering
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    approved_at TIMESTAMP WITH TIME ZONE,
-    
-    INDEX idx_topic_submission_order (topic_id, submitted_at)
+    approved_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Indexes for posts
+CREATE INDEX idx_posts_topic_submission_order ON posts(topic_id, submitted_at);
 ```
 
 ## Queue Management Tables
@@ -263,13 +264,14 @@ CREATE TABLE moderation_events (
     content_id UUID NOT NULL, -- references posts.id, topics.id, or private_messages.id
     outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected', 'calibrated')), -- moderation result
     moderator_id UUID REFERENCES users(id), -- NULL for AI moderation
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    INDEX idx_user_events (user_id, created_at DESC),
-    INDEX idx_content (content_type, content_id),
-    INDEX idx_event_type (event_type),
-    INDEX idx_outcome_content (outcome, content_type)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Indexes for moderation_events
+CREATE INDEX idx_moderation_events_user_events ON moderation_events(user_id, created_at DESC);
+CREATE INDEX idx_moderation_events_content ON moderation_events(content_type, content_id);
+CREATE INDEX idx_moderation_events_event_type ON moderation_events(event_type);
+CREATE INDEX idx_moderation_events_outcome_content ON moderation_events(outcome, content_type);
 ```
 
 ### Translations Table (Multilingual Support)
