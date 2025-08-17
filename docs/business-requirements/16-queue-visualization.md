@@ -1,38 +1,60 @@
-# Visual Queue Requirements
+# Queue Status System
 
 ## Concept
 
-Submissions appear as capsules traveling through a dynamic pneumatic tube network. The system features a central hub with branching tubes for different queue types. The visual complexity scales with activity levels.
+Clear, honest communication about queue position and estimated wait times through status cards and Overlord commentary. Replaces complex visualization with transparent, scalable status updates.
 
-## Queue Types and Styling
+## Queue Status Cards
 
-### Topic Creation
-Red capsules with crown icons in the main central tube
+### Topic Approval Bureau
+```
+┌─────────────────────────────────┐
+│ 🏛️ TOPIC APPROVAL BUREAU        │
+│ Your submission: Position #3     │
+│ Estimated review: 2-4 minutes   │
+│ Current status: Under review     │
+└─────────────────────────────────┘
+```
 
-### Post Moderation
-Blue capsules with message icons in topic-specific branch tubes
+### Debate Moderation Office
+```
+┌─────────────────────────────────┐
+│ 📝 CLIMATE CHANGE DEBATE        │
+│ Your post: Position #7          │
+│ Estimated review: 5-8 minutes   │
+│ Current status: Awaiting review │
+└─────────────────────────────────┘
+```
 
-### Private Messages
-Green capsules with lock icons in user-pair branch tubes
+### Private Communication Review
+```
+┌─────────────────────────────────┐
+│ 🔒 PRIVATE MESSAGE REVIEW       │
+│ Your message: Position #2       │
+│ Estimated review: 1-3 minutes   │
+│ Current status: Under review     │
+└─────────────────────────────────┘
+```
 
-## Behavior
+## Overlord Commentary System
 
-The tube network expands and contracts dynamically based on active queues. Citizens can watch submissions flow through different branches. Clicking a capsule reveals its metadata where permitted.
+### Progressive Status Updates
+- **Initial**: "Citizen, your submission has been logged. Position #3 in the queue."
+- **Processing**: "The Committee is now reviewing your proposal. Maintain patience."
+- **Near completion**: "Your reasoning shows promise. Final evaluation in progress..."
 
-## Visibility Permissions
+### Context-Aware Messages
+Commentary varies based on queue position, wait time, and submission type while maintaining authoritarian character.
 
-### All Users (including anonymous)
-Can see queue lengths, author names (linked to profiles), and capsule positions
+## Public Queue Overview
 
-### Moderators with content preview RBAC permission
-Can see content previews and additional metadata
+### Aggregate Statistics
+- Total items in each queue
+- Estimated wait times for new submissions
+- General processing status without individual details
 
-### No Content Previews
-Are shown to citizens or anonymous users
-
-## Parallel Processing Visualization
-
-Multiple tubes operate simultaneously, showing the parallel nature of the moderation system. This reinforces that debates in different topics can proceed independently.
+### Anonymous Visibility
+All users can see queue lengths and general activity without accessing individual submission details.
 
 ---
 

@@ -73,6 +73,7 @@ CREATE TABLE topic_creation_queue (
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    position_in_queue INTEGER NOT NULL, -- Calculated queue position for user display
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
@@ -81,7 +82,8 @@ CREATE TABLE topic_creation_queue (
     
     INDEX idx_priority_score (priority_score),
     INDEX idx_status (status),
-    INDEX idx_topic (topic_id)
+    INDEX idx_topic (topic_id),
+    INDEX idx_position (position_in_queue)
 );
 ```
 
@@ -94,6 +96,7 @@ CREATE TABLE post_moderation_queue (
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    position_in_queue INTEGER NOT NULL, -- Calculated queue position for user display
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
@@ -102,7 +105,8 @@ CREATE TABLE post_moderation_queue (
     
     INDEX idx_topic_priority (topic_id, priority_score),
     INDEX idx_status (status),
-    INDEX idx_post (post_id)
+    INDEX idx_post (post_id),
+    INDEX idx_position (position_in_queue)
 );
 ```
 
@@ -116,6 +120,7 @@ CREATE TABLE private_message_queue (
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    position_in_queue INTEGER NOT NULL, -- Calculated queue position for user display
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
@@ -125,7 +130,8 @@ CREATE TABLE private_message_queue (
     -- Queue naming handled in application logic: queue_name = f"users_{min(sender_id, recipient_id)}_{max(sender_id, recipient_id)}"
     INDEX idx_user_pair_priority (sender_id, recipient_id, priority_score),
     INDEX idx_status (status),
-    INDEX idx_message (message_id)
+    INDEX idx_message (message_id),
+    INDEX idx_position (position_in_queue)
 );
 ```
 

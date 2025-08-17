@@ -68,14 +68,14 @@ class APIResponse(BaseModel):
 
 ### Public Endpoints
 
-- `GET /api/v1/queue` - View the moderation queue (public visualization)
+- `GET /api/v1/queue/status/{submission_id}` - Get queue status for specific submission
+- `GET /api/v1/queue/overview` - Public queue overview (lengths only)
 - `GET /api/v1/users/{user_id}/profile` - Public user profile
 - `GET /api/v1/leaderboard` - Global leaderboard
 
 ### WebSocket Endpoints
 
-- `WS /api/v1/overlord/chat` - Real-time chat with Overlord
-- `WS /api/v1/queue/stream` - Real-time queue updates for visualization
+- `WS /api/v1/overlord/chat` - Real-time chat with Overlord (includes queue status updates)
 
 ---
 

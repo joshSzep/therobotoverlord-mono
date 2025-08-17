@@ -21,11 +21,12 @@ Dedicated UI element in user profiles for rejected posts
 - Clear labeling as "Graveyard"
 - Display rejected posts with Overlord feedback
 
-### Queue Visualization
-Dynamic pneumatic tube network
-- Red capsules with crown icons (Topic Creation)
-- Blue capsules with message icons (Post Moderation)
-- Green capsules with lock icons (Private Messages)
+### Queue Status Display
+Clear status cards with honest position and time estimates
+- Topic Approval Bureau cards with crown icons
+- Debate Moderation Office cards with message icons
+- Private Communication Review cards with lock icons
+- Overlord commentary integration for progressive updates
 
 ---
 
