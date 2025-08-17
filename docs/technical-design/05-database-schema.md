@@ -79,13 +79,14 @@ CREATE TABLE topic_creation_queue (
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
-    worker_id VARCHAR(255),
-    
-    INDEX idx_priority_score (priority_score),
-    INDEX idx_status (status),
-    INDEX idx_topic (topic_id),
-    INDEX idx_position (position_in_queue)
+    worker_id VARCHAR(255)
 );
+
+-- Indexes for topic_creation_queue
+CREATE INDEX idx_topic_queue_priority_score ON topic_creation_queue(priority_score);
+CREATE INDEX idx_topic_queue_status ON topic_creation_queue(status);
+CREATE INDEX idx_topic_queue_topic ON topic_creation_queue(topic_id);
+CREATE INDEX idx_topic_queue_position ON topic_creation_queue(position_in_queue);
 ```
 
 ### Post Moderation Queue Table
@@ -102,13 +103,14 @@ CREATE TABLE post_moderation_queue (
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
-    worker_id VARCHAR(255),
-    
-    INDEX idx_topic_priority (topic_id, priority_score),
-    INDEX idx_status (status),
-    INDEX idx_post (post_id),
-    INDEX idx_position (position_in_queue)
+    worker_id VARCHAR(255)
 );
+
+-- Indexes for post_moderation_queue
+CREATE INDEX idx_post_queue_topic_priority ON post_moderation_queue(topic_id, priority_score);
+CREATE INDEX idx_post_queue_status ON post_moderation_queue(status);
+CREATE INDEX idx_post_queue_post ON post_moderation_queue(post_id);
+CREATE INDEX idx_post_queue_position ON post_moderation_queue(position_in_queue);
 ```
 
 ### Private Message Queue Table
@@ -127,13 +129,14 @@ CREATE TABLE private_message_queue (
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
-    worker_id VARCHAR(255),
-    
-    INDEX idx_conversation_priority (conversation_id, priority_score DESC, entered_queue_at ASC),
-    INDEX idx_status (status),
-    INDEX idx_message (message_id),
-    INDEX idx_conversation_position (conversation_id, position_in_queue)
+    worker_id VARCHAR(255)
 );
+
+-- Indexes for private_message_queue
+CREATE INDEX idx_message_queue_conv_priority ON private_message_queue(conversation_id, priority_score DESC, entered_queue_at ASC);
+CREATE INDEX idx_message_queue_status ON private_message_queue(status);
+CREATE INDEX idx_message_queue_message ON private_message_queue(message_id);
+CREATE INDEX idx_message_queue_conv_position ON private_message_queue(conversation_id, position_in_queue);
 ```
 
 ## Governance Tables
