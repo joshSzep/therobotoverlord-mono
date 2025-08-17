@@ -163,13 +163,20 @@ CREATE TABLE appeals (
 ```sql
 CREATE TABLE flags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    topic_id UUID REFERENCES topics(id) ON DELETE CASCADE,
     flagger_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reason TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'sustained', 'dismissed')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'sustained', 'dismissed')) DEFAULT 'pending',
     reviewed_by UUID REFERENCES users(id),
     reviewed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    review_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT flags_content_check CHECK (
+        (post_id IS NOT NULL AND topic_id IS NULL) OR 
+        (post_id IS NULL AND topic_id IS NOT NULL)
+    )
 );
 ```
 
