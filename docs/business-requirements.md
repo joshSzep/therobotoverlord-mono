@@ -64,7 +64,7 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 ## Topics
 - **Who can create topics**
   - The Overlord can create topics at will.
-  - Citizens can create topics only if they are among the most loyal, as determined by the leaderboard. The exact threshold is a product control setting.
+  - Citizens can create topics only if they are among the most loyal, as determined by the leaderboard. The exact threshold is the top 10% of citizens by loyalty score, calculated in real-time.
 - **Approval**
   - Fully automatic via Overlord (LLM). No manual admin approval required for MVP.
   - Uses same evaluation criteria as posts: logic, tone, relevance.
@@ -115,7 +115,7 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 
 ## Gamification and Public Reputation
 - **Loyalty Score**
-  - Definition. Calculated using a proprietary algorithm based on moderation outcomes across all content types. The exact formula is not disclosed to users.
+  - Definition. Calculated using a proprietary algorithm based on moderation outcomes across all content types. General factors are disclosed to users (approved/rejected post ratios), but specific weights and calculations remain proprietary.
   - Updates. Real-time calculation with no caching needed for MVP.
   - Storage. Stored in users table and recalculated on each moderation outcome.
   - Scope. Public. Shown on profile, registry, and leaderboard. The only public reputation metric.
@@ -240,6 +240,10 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
   - **Private Messages**: Green capsules with lock icons in user-pair branch tubes
 - **Behavior**
   - The tube network expands and contracts dynamically based on active queues. Citizens can watch submissions flow through different branches. Clicking a capsule reveals its metadata where permitted.
+- **Visibility Permissions**
+  - **All users** (including anonymous): Can see queue lengths, author names (linked to profiles), and capsule positions
+  - **Moderators with content preview RBAC permission**: Can see content previews and additional metadata
+  - **No content previews** are shown to citizens or anonymous users
 - **Parallel Processing Visualization**
   - Multiple tubes operate simultaneously, showing the parallel nature of the moderation system. This reinforces that debates in different topics can proceed independently.
 

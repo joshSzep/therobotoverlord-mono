@@ -341,12 +341,14 @@ class LoyaltyScoreService:
         
     - API WS handler subscribes to stream and forwards events to client
         
+    - **Overlord Commentary Streaming**: Workers can stream in-character commentary during processing via WebSocket connections
+        
     - Event schema:
         
         ```json
         {
           "seq": 123,
-          "type": "token|status|error|done",
+          "type": "token|status|error|done|commentary",
           "ts": "ISO8601 timestamp",
           "payload": { ... }
         }
@@ -518,8 +520,7 @@ CREATE TABLE private_message_queue (
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
     worker_id VARCHAR(255),
     
-    -- Ensure consistent ordering of user pairs (smaller UUID first)
-    CONSTRAINT chk_user_order CHECK (sender_id < recipient_id),
+    -- Queue naming handled in application logic: queue_name = f"users_{min(sender_id, recipient_id)}_{max(sender_id, recipient_id)}"
     INDEX idx_user_pair_priority (sender_id, recipient_id, priority_score),
     INDEX idx_status (status),
     INDEX idx_message (message_id)
