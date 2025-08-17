@@ -66,6 +66,7 @@ step(
     -- Enable required extensions
     CREATE EXTENSION IF NOT EXISTS "pgcrypto";
     CREATE EXTENSION IF NOT EXISTS "citext";
+    CREATE EXTENSION IF NOT EXISTS "pgvector";
     
     -- Users table
     CREATE TABLE users (
@@ -445,6 +446,7 @@ if __name__ == '__main__':
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "citext";
+CREATE EXTENSION IF NOT EXISTS "pgvector";
 
 -- Users table
 CREATE TABLE users (
