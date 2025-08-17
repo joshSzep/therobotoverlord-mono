@@ -115,10 +115,10 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 
 ## Gamification and Public Reputation
 - **Loyalty Score**
-  - Definition. (topics_created - topics_rejected) + (posts_created - posts_rejected) + (private_messages_created - private_messages_rejected).
+  - Definition. Calculated using a proprietary algorithm based on moderation outcomes across all content types. The exact formula is not disclosed to users.
   - Updates. Real-time calculation with no caching needed for MVP.
   - Storage. Stored in users table and recalculated on each moderation outcome.
-  - Scope. Public. Shown on profile, registry, and leaderboard.
+  - Scope. Public. Shown on profile, registry, and leaderboard. The only public reputation metric.
 - **Leaderboard**
   - Global leaderboard shows all citizens, ordered by Loyalty Score. Every citizen can see their rank.
   - Topic creation privilege uses a high-rank threshold.
@@ -126,18 +126,15 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
   - Positive examples. Master of Logic. Defender of Evidence. Diligent Calibrator.
   - Negative examples. Strawman. Ad Hominem. Illogical.
   - Badges appear publicly on profile and in the registry.
-- **Visual counters**
-  - Robot head points. Count of approved posts.
-  - Tombstone points. Count of rejected posts.
 
 ## Citizen Profiles and Registry
 - **Profile contents**
-  - Public username. Robot head points. Tombstone points. Loyalty Score. Rank. Badges. Count of topics started.
+  - Public username. Loyalty Score. Rank. Badges. Count of topics started.
   - Personalization is intentionally minimal. No avatars. No bios. This avoids offensive profile content.
   - Activity list. All posts with status icon and Overlord feedback visible per item.
   - Tag cloud. Derived from Overlord-assigned tags of topics the citizen participated in. Clicking a tag filters the citizen’s activity to that tag.
 - **Registry**
-  - A public directory of all citizens with their name, rank, Loyalty Score, robot head points, tombstone points, and badges.
+  - A public directory of all citizens with their name, rank, Loyalty Score, and badges.
 
 ## Appeals and Reporting
 - **Appeals**

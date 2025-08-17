@@ -228,6 +228,10 @@ class LoyaltyScoreService:
     def __init__(self, redis_client, db_client):
         self.redis = redis_client
         self.db = db_client
+        # Private algorithm parameters - not exposed to users
+        self._POST_VALUE_SCALAR = 1
+        self._TOPIC_VALUE_SCALAR = 5  # Topics worth more than posts
+        self._PRIVATE_MESSAGE_VALUE_SCALAR = 1
     
     async def get_loyalty_score(self, user_id: str) -> int:
         # Check Redis cache first
@@ -236,21 +240,48 @@ class LoyaltyScoreService:
             return int(cached_score)
         
         # Calculate from events if cache miss
-        score = await self.calculate_from_events(user_id)
+        score = await self._calculate_from_events(user_id)
         await self.redis.setex(f"loyalty:{user_id}", 3600, score)  # Cache for 1 hour
         return score
     
-    async def record_moderation_event(self, user_id: str, event_type: str, content_id: str, points_delta: int):
-        # Store event
+    async def _calculate_from_events(self, user_id: str) -> int:
+        # Private method - algorithm details hidden from public API
+        events = await self.db.moderation_events.filter(user_id=user_id)
+        
+        counts = {
+            "accepted_post_count": 0, "rejected_post_count": 0,
+            "accepted_topic_count": 0, "rejected_topic_count": 0,
+            "accepted_private_message_count": 0, "rejected_private_message_count": 0
+        }
+        
+        for event in events:
+            key = f"{event.outcome}_{event.content_type}_count"
+            if key in counts:
+                counts[key] += 1
+        
+        # Proprietary loyalty score calculation
+        loyalty_score = (
+            self._POST_VALUE_SCALAR * (counts["accepted_post_count"] - counts["rejected_post_count"]) +
+            self._TOPIC_VALUE_SCALAR * (counts["accepted_topic_count"] - counts["rejected_topic_count"]) +
+            self._PRIVATE_MESSAGE_VALUE_SCALAR * (counts["accepted_private_message_count"] - counts["rejected_private_message_count"])
+        )
+        
+        return loyalty_score
+    
+    async def record_moderation_event(self, user_id: str, event_type: str, content_type: str, content_id: str, outcome: str):
+        # Store event with outcome
         await self.db.moderation_events.create({
             "user_id": user_id,
             "event_type": event_type,
+            "content_type": content_type,
             "content_id": content_id,
-            "points_delta": points_delta
+            "outcome": outcome
         })
         
-        # Invalidate cache
+        # Invalidate cache and update user record
         await self.redis.delete(f"loyalty:{user_id}")
+        new_score = await self.get_loyalty_score(user_id)
+        await self.db.users.filter(id=user_id).update(loyalty_score=new_score)
         
         # Trigger permission updates
         await self.update_dynamic_permissions(user_id)
@@ -351,7 +382,7 @@ CREATE TABLE users (
     google_id VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('citizen', 'moderator', 'admin', 'superadmin')),
-    loyalty_score INTEGER DEFAULT 0, -- Cached from moderation_events, updated via event-driven system
+    loyalty_score INTEGER DEFAULT 0, -- Cached score from proprietary algorithm, only public metric
     is_banned BOOLEAN DEFAULT FALSE,
     is_sanctioned BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
@@ -571,10 +602,10 @@ CREATE TABLE user_badges (
 CREATE TABLE moderation_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    event_type VARCHAR(50) NOT NULL, -- 'topic_approved', 'post_rejected', 'private_message_approved', etc.
+    event_type VARCHAR(50) NOT NULL, -- 'topic_moderated', 'post_moderated', 'private_message_moderated', etc.
     content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('topic', 'post', 'private_message')),
     content_id UUID NOT NULL, -- references posts.id, topics.id, or private_messages.id
-    points_delta INTEGER NOT NULL, -- +1 for approval, -1 for rejection
+    outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected', 'calibrated')), -- moderation result
     moderator_id UUID REFERENCES users(id), -- NULL for AI moderation
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
