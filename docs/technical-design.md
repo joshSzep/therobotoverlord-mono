@@ -145,31 +145,39 @@ This document captures all technical design decisions made so far. It is a livin
 
 ### Response Format
 
-- **Standardized wrapper** for all responses:
-    
-    ```json
-    {
-      "status": "ok",
-      "data": { ... },
-      "meta": { ... }
-    }
-    ```
-    
-- **Errors**:
-    
-    ```json
-    {
-      "status": "error",
-      "error": {
-        "code": "UNAUTHORIZED",
-        "message": "Authentication required",
-        "details": { },
-        "trace_id": "trace-id"
-      }
-    }
-    ```
-    
-- Enum codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `BAD_REQUEST`, `RATE_LIMITED`, `VALIDATION_ERROR`, `INTERNAL_ERROR`
+**Pydantic Models for API Responses:**
+
+```python
+from pydantic import BaseModel
+from typing import Any, Optional, Dict
+from enum import Enum
+
+class ResponseStatus(str, Enum):
+    OK = "ok"
+    ERROR = "error"
+
+class ErrorCode(str, Enum):
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    NOT_FOUND = "NOT_FOUND"
+    CONFLICT = "CONFLICT"
+    BAD_REQUEST = "BAD_REQUEST"
+    RATE_LIMITED = "RATE_LIMITED"
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+
+class APIError(BaseModel):
+    code: ErrorCode
+    message: str
+    details: Dict[str, Any] = {}
+    trace_id: str
+
+class APIResponse(BaseModel):
+    status: ResponseStatus
+    data: Optional[Any] = None
+    meta: Optional[Dict[str, Any]] = None
+    error: Optional[APIError] = None
+```
     
 
 ---
@@ -345,15 +353,25 @@ class LoyaltyScoreService:
         
     - **Overlord Commentary Streaming**: Workers can stream in-character commentary during processing via WebSocket connections
         
-    - Event schema:
+    - **Pydantic Event Models**:
         
-        ```json
-        {
-          "seq": 123,
-          "type": "token|status|error|done|commentary",
-          "ts": "ISO8601 timestamp",
-          "payload": { ... }
-        }
+        ```python
+        from pydantic import BaseModel
+        from typing import Any, Dict, Literal
+        from datetime import datetime
+        
+        class EventType(str, Enum):
+            TOKEN = "token"
+            STATUS = "status"
+            ERROR = "error"
+            DONE = "done"
+            COMMENTARY = "commentary"
+        
+        class StreamEvent(BaseModel):
+            seq: int
+            type: EventType
+            ts: datetime
+            payload: Dict[str, Any]
         ```
         
 - **Retention**:
@@ -857,66 +875,51 @@ class VisualizationController:
   - **Private Messages**: Green capsules with lock icons
 - **Performance**: Same payload regardless of user count, updates batched for efficiency
 
-### Event Schema
+### Queue Event Models
+
+**Pydantic Models for Queue WebSocket Events:**
+
+```python
+from pydantic import BaseModel
+from typing import List, Optional, Literal
+from datetime import datetime
+from uuid import UUID
+
+class ContentType(str, Enum):
+    TOPIC = "topic"
+    POST = "post"
+    PRIVATE_MESSAGE = "private_message"
+
+class QueueItem(BaseModel):
+    id: UUID
+    position: int
+    content_type: ContentType
+    author: Optional[str] = None
+    sender: Optional[str] = None  # For private messages
+    preview: Optional[str] = None  # Only populated for users with content_preview permission
+    timestamp: datetime
+    estimated_completion: datetime
+
+class QueueInfo(BaseModel):
+    queue_type: str
+    queue_length: int
+    topic_title: Optional[str] = None  # For topic-specific queues
+    participants: Optional[List[str]] = None  # For private message queues
+    items: List[QueueItem]
+
+class QueueUpdateEvent(BaseModel):
+    type: Literal["queue_update"]
+    timestamp: datetime
+    data: "QueueUpdateData"
+
+class QueueUpdateData(BaseModel):
+    active_queues: List[QueueInfo]
+```
 
 **Permission-Based Content Filtering:**
 - `preview` field is conditionally populated based on user permissions
 - Citizens and anonymous users receive `null` for preview content
 - Only moderators with `content_preview` permission see actual content
-
-```json
-{
-  "type": "queue_update",
-  "timestamp": "2025-01-01T12:00:00Z",
-  "data": {
-    "active_queues": [
-      {
-        "queue_type": "global_topics",
-        "queue_length": 3,
-        "items": [
-          {
-            "id": "uuid",
-            "position": 1,
-            "content_type": "topic",
-"estimated_completion": "2025-01-01T12:05:00Z"
-          }
-        ]
-      },
-      {
-        "queue_type": "topic_abc123",
-        "topic_title": "AI Ethics Discussion",
-        "queue_length": 7,
-        "items": [
-          {
-            "id": "uuid",
-            "position": 1,
-            "content_type": "post",
-            "author": "citizen_name",
-            "preview": null, // Only populated for users with content_preview permission
-            "timestamp": "2025-01-01T12:01:00Z",
-            "estimated_completion": "2025-01-01T12:03:00Z"
-          }
-        ]
-      },
-      {
-        "queue_type": "users_alice_bob",
-        "participants": ["alice", "bob"],
-        "queue_length": 1,
-        "items": [
-          {
-            "id": "uuid",
-            "position": 1,
-            "content_type": "private_message",
-            "sender": "alice",
-            "timestamp": "2025-01-01T12:02:00Z",
-            "estimated_completion": "2025-01-01T12:04:00Z"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
 
 ---
 
