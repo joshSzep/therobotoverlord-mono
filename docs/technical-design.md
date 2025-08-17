@@ -809,16 +809,40 @@ chat_agent = Agent(
    - User IDs sorted alphabetically for consistent naming
    - Maintains conversation context and ordering
 
-### Queue Visualization
+### Queue Visualization (Hybrid Approach)
 
-- **Transport**: WebSockets via `WS /api/v1/queue/stream`
+```python
+class VisualizationController:
+    def __init__(self):
+        self.update_frequencies = {
+            'queue_lengths': 2,      # Every 2 seconds - accurate data
+            'capsule_positions': 10,  # Every 10 seconds - smooth animation
+            'activity_levels': 5     # Every 5 seconds - visual appeal
+        }
+    
+    async def generate_visualization_update(self):
+        return {
+            'queue_stats': await self.get_queue_lengths(),     # Real data
+            'capsule_positions': await self.get_approximate_positions(), # Interpolated
+            'activity_indicators': await self.get_activity_levels()     # Artistic
+        }
+```
+
+**Visualization Strategy:**
+- **Queue lengths are accurate** (users know exactly how many items ahead)
+- **Capsule movement is smooth** but not perfectly synchronized with processing
+- **Activity levels provide visual feedback** without performance cost
+- **Graceful degradation** under high load
+
+**Transport & Styling:**
+- **WebSockets**: `WS /api/v1/queue/stream` with delta updates
 - **Visual System**: Dynamic pneumatic tube network that grows/shrinks based on active queues
 - **Layout**: Central hub with branching tubes for each active queue
-- **Capsule Metadata**: Shows author, content type, topic/conversation context, timestamp
-- **Different Styles**: 
+- **Capsule Styles**: 
   - **Topics**: Red capsules with crown icons
   - **Posts**: Blue capsules with message icons  
   - **Private Messages**: Green capsules with lock icons
+- **Performance**: Same payload regardless of user count, updates batched for efficiency
 
 ### Event Schema
 
@@ -882,28 +906,171 @@ chat_agent = Agent(
 
 ## Queue Management Logic
 
-### Worker Assignment Strategy
+### Configuration
 
 ```python
-# Pseudo-code for queue processing
-class QueueManager:
-    async def assign_workers(self):
-        # Prioritize queues by type and load
-        queue_priorities = {
-            'global_topics': 1,  # Highest priority
-            'topic_*': 2,        # Medium priority  
-            'users_*': 3         # Lower priority
-        }
+QUEUE_CONFIG = {
+    'total_workers': 2,  # Start minimal, scale up as needed
+    'worker_distribution': {
+        'global_topics': {'min': 1, 'max': 1},      # Always ensure topic approval
+        'topic_posts': {'min': 0, 'max': 2},        # Scale based on demand
+        'private_messages': {'min': 0, 'max': 1}    # Lower priority
+    },
+    'circuit_breaker_threshold': timedelta(minutes=2),  # Quick reallocation
+    'configurable_scaling': True  # Support for N workers via config
+}
+```
+
+### Queue Orchestrator
+
+```python
+class QueueOrchestrator:
+    def __init__(self, total_workers: int = 2):
+        self.total_workers = total_workers
+        self.worker_pool = WorkerPool(total_workers)
+        self.active_queues = {}
+        self.circuit_breaker_threshold = timedelta(minutes=2)
+    
+    async def distribute_workers(self):
+        """Smart worker distribution with priority guarantees"""
+        # Phase 1: Guarantee minimum workers for critical queues
+        await self._assign_critical_workers()
         
-        # Distribute workers across queue types
-        available_workers = await self.get_available_workers()
+        # Phase 2: Distribute remaining workers by demand
+        await self._assign_demand_based_workers()
         
-        for queue_type in sorted_queue_types:
-            queues = await self.get_queues_by_type(queue_type)
-            workers_needed = min(len(queues), available_workers)
+        # Phase 3: Handle queue lifecycle events
+        await self._manage_queue_lifecycle()
+    
+    async def _assign_critical_workers(self):
+        # Always ensure global topics queue has workers
+        if await self.has_pending_items('global_topics'):
+            await self.worker_pool.assign_workers('global_topics', min_workers=1)
+    
+    async def check_starvation(self):
+        """Circuit breaker: reallocate workers for starved queues"""
+        starved_queues = []
+        
+        for queue in await self.get_all_queues():
+            oldest_item = await queue.get_oldest_pending_item()
+            if oldest_item and self._is_starved(oldest_item, self.circuit_breaker_threshold):
+                starved_queues.append(queue)
+        
+        if starved_queues:
+            await self._emergency_worker_boost(starved_queues)
+
+class WorkerPool:
+    def __init__(self, total_workers: int = 2):
+        self.total_workers = total_workers
+        self.available_workers = total_workers
+        self.assignments = {}
+    
+    async def scale_workers(self, new_total: int):
+        """Support dynamic scaling without restart"""
+        if new_total > self.total_workers:
+            await self._spawn_workers(new_total - self.total_workers)
+        elif new_total < self.total_workers:
+            await self._terminate_workers(self.total_workers - new_total)
+        self.total_workers = new_total
+```
+
+### Queue Lifecycle Management
+
+```python
+class QueueLifecycleManager:
+    async def on_topic_approved(self, topic_id: str):
+        """Create dedicated post queue only after topic approval"""
+        queue_name = f"topic_{topic_id}"
+        await self.create_queue(queue_name, queue_type='topic_posts')
+        await self.orchestrator.register_queue(queue_name)
+        
+    async def on_topic_archived(self, topic_id: str):
+        """Graceful queue shutdown"""
+        queue_name = f"topic_{topic_id}"
+        await self.drain_queue(queue_name)  # Process remaining items
+        await self.delete_queue(queue_name)
+        
+    async def cleanup_idle_queues(self):
+        """Periodic cleanup of empty queues"""
+        for queue in await self.get_idle_queues(idle_minutes=30):
+            if queue.depth == 0 and not queue.has_active_workers:
+                await self.delete_queue(queue.name)
+```
+
+### FIFO Fallback Strategy
+
+```python
+class FIFOFallbackProcessor:
+    """Dead-simple fallback when orchestration fails"""
+    def __init__(self):
+        self.processing_order = [
+            'topic_creation_queue',
+            'post_moderation_queue', 
+            'private_message_queue'
+        ]
+    
+    async def process_all_queues(self):
+        """Process everything in creation order - bulletproof but slower"""
+        while True:
+            processed_any = False
             
-            await self.assign_workers_to_queues(queues, workers_needed)
-            available_workers -= workers_needed
+            for table_name in self.processing_order:
+                item = await self.get_oldest_pending_item(table_name)
+                if item:
+                    await self.process_item_simple(item)
+                    processed_any = True
+                    break  # Process one item, then check all queues again
+            
+            if not processed_any:
+                await asyncio.sleep(1)  # No work available
+    
+    async def get_oldest_pending_item(self, table_name: str):
+        """Get single oldest item across ALL queues of this type"""
+        query = f"""
+        SELECT * FROM {table_name} 
+        WHERE status = 'pending' 
+        ORDER BY priority_score ASC 
+        LIMIT 1
+        """
+        return await self.db.fetch_one(query)
+
+class SystemHealthMonitor:
+    async def check_orchestration_health(self):
+        try:
+            await self.orchestrator.distribute_workers()
+            await self.orchestrator.check_queue_health()
+            return "healthy"
+        except Exception as e:
+            logger.error(f"Orchestration failed: {e}")
+            await self.activate_fifo_fallback()
+            return "fallback_active"
+    
+    async def activate_fifo_fallback(self):
+        # Stop sophisticated processing
+        await self.orchestrator.shutdown_gracefully()
+        
+        # Start simple FIFO processor
+        self.fifo_processor = FIFOFallbackProcessor()
+        asyncio.create_task(self.fifo_processor.process_all_queues())
+        
+        # Alert administrators
+        await self.send_alert("Queue system in FIFO fallback mode")
+    
+    async def attempt_orchestration_recovery(self):
+        """Try to restore sophisticated processing every 5 minutes"""
+        while self.in_fallback_mode:
+            await asyncio.sleep(300)  # 5 minutes
+            
+            try:
+                test_orchestrator = QueueOrchestrator()
+                await test_orchestrator.health_check()
+                
+                await self.switch_to_orchestrated_mode()
+                logger.info("Restored sophisticated queue processing")
+                break
+                
+            except Exception:
+                logger.info("Orchestration still unhealthy, continuing FIFO fallback")
 ```
 
 ### Queue Table Benefits
