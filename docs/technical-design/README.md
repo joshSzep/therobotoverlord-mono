@@ -27,6 +27,8 @@ This directory contains the complete technical design for **The Robot Overlord**
 - [**Queue Management**](./12-queue-management.md) - Multi-queue orchestration logic
 - [**Performance & Scaling**](./13-performance-scaling.md) - Optimization strategies
 - [**Security & Compliance**](./14-security-compliance.md) - Security measures and data protection
+- [**Queue Status Service**](./15-queue-status-service.md) - Simplified queue status system
+- [**Token Refresh Strategy**](./16-token-refresh-strategy.md) - Activity-based authentication refresh
 
 ## Cross-References
 

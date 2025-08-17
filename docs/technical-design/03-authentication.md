@@ -6,12 +6,13 @@
 
 ## Access Tokens
 
-- **Lifetime**: 5 minutes
+- **Lifetime**: 15 minutes (optimized for user experience)
 - **Storage**: httpOnly, Secure cookie (`__Secure-trl_at`)
 - **Domain**: `.therobotoverlord.com`
 - **Path**: `/`
 - **SameSite**: Lax
-- **Expiration**: matches 5 minutes
+- **Expiration**: matches 15 minutes
+- **Activity Extension**: Automatically refreshed on user activity within 5 minutes of expiry
 
 ## Refresh Tokens
 
