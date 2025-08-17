@@ -48,10 +48,12 @@ CREATE TABLE user_permissions (
     granted_by_user_id UUID REFERENCES users(id), -- admin who granted permission
     is_active BOOLEAN DEFAULT TRUE,
     
-    PRIMARY KEY (user_id, permission_id),
-    INDEX idx_user_active (user_id, is_active),
-    INDEX idx_expires (expires_at)
+    PRIMARY KEY (user_id, permission_id)
 );
+
+-- Indexes for user_permissions
+CREATE INDEX idx_user_permissions_user_active ON user_permissions(user_id, is_active);
+CREATE INDEX idx_user_permissions_expires ON user_permissions(expires_at) WHERE expires_at IS NOT NULL;
 ```
 
 ## Permission Categories
