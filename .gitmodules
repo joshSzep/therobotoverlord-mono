@@ -1,0 +1,6 @@
+[submodule "therobotoverlord-api"]
+	path = therobotoverlord-api
+	url = https://github.com/joshSzep/therobotoverlord-api.git
+[submodule "therobotoverlord-web"]
+	path = therobotoverlord-web
+	url = https://github.com/joshSzep/therobotoverlord-web.git

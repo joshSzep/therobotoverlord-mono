@@ -164,13 +164,85 @@ This document captures all technical design decisions made so far. It is a livin
         "code": "UNAUTHORIZED",
         "message": "Authentication required",
         "details": { },
-        "trace_id": "uuid"
+        "trace_id": "trace-id"
       }
     }
     ```
     
 - Enum codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `BAD_REQUEST`, `RATE_LIMITED`, `VALIDATION_ERROR`, `INTERNAL_ERROR`
     
+
+---
+
+## Frontend Design Requirements
+
+### Overlord Aesthetic Implementation
+
+**Visual Identity:**
+- **1960s Soviet propaganda aesthetic** with bold reds, off-white textures, stark shapes
+- **Heavy display typography** for authoritarian feel
+- **Minimal UI chrome** to maintain clean, propaganda poster energy
+
+**Overlord Message Styling:**
+- **Distinct typographic treatment** for all Overlord communications
+- **Unique visual container** that makes Overlord messages instantly recognizable
+- **Robotic styling** that differentiates from citizen content
+- Applied to: moderation feedback, chat responses, notifications, sanctions
+
+**UI Components:**
+- **Graveyard Section**: Dedicated UI element in user profiles for rejected posts
+  - Private visibility (author + moderators/admins only)
+  - Clear labeling as "Graveyard" 
+  - Display rejected posts with Overlord feedback
+- **Queue Visualization**: Dynamic pneumatic tube network
+  - Red capsules with crown icons (Topic Creation)
+  - Blue capsules with message icons (Post Moderation)
+  - Green capsules with lock icons (Private Messages)
+
+---
+
+## Multilingual Translation System
+
+### Translation Architecture
+
+**Translation Flow:**
+1. **Content Ingestion**: Posts submitted in any language
+2. **Language Detection**: Automatic detection of non-English content
+3. **Translation to English**: OpenAI API for canonical storage
+4. **Persistence**: Store both original and translated versions
+5. **Moderation**: Overlord evaluates English version
+6. **Display**: Show appropriate version based on context
+
+**Translation Table (Future):**
+```sql
+CREATE TABLE translations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content_id UUID NOT NULL, -- References posts.id or topics.id
+    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('post', 'topic')),
+    language_code VARCHAR(10) NOT NULL, -- ISO language code
+    translated_content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(content_id, content_type, language_code)
+);
+```
+
+**OpenAI Integration:**
+```python
+# Translation service using OpenAI
+class TranslationService:
+    def __init__(self):
+        self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    async def translate_to_english(self, content: str, source_language: str) -> str:
+        response = await self.openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Translate the following text to English, preserving meaning and tone."},
+                {"role": "user", "content": content}
+            ]
+        )
+        return response.choices[0].message.content
+```
 
 ---
 
@@ -267,10 +339,13 @@ CREATE TABLE users (
     google_id VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('citizen', 'moderator', 'admin', 'superadmin')),
-    loyalty_score INTEGER DEFAULT 0,
+    loyalty_score INTEGER DEFAULT 0, -- Real-time: (topics_created - topics_rejected) + (posts_created - posts_rejected) + (private_messages_created - private_messages_rejected)
     approved_posts_count INTEGER DEFAULT 0,
     rejected_posts_count INTEGER DEFAULT 0,
     topics_created_count INTEGER DEFAULT 0,
+    topics_rejected_count INTEGER DEFAULT 0,
+    private_messages_created_count INTEGER DEFAULT 0,
+    private_messages_rejected_count INTEGER DEFAULT 0,
     can_create_topics BOOLEAN DEFAULT FALSE,
     is_banned BOOLEAN DEFAULT FALSE,
     is_sanctioned BOOLEAN DEFAULT FALSE,
@@ -342,7 +417,9 @@ CREATE TABLE posts (
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     parent_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL, -- Canonical English storage
+    original_content TEXT, -- Original submission if translated
+    original_language VARCHAR(10), -- ISO language code if translated
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'calibrated', 'rejected')),
     overlord_feedback TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -528,9 +605,11 @@ CREATE TABLE user_badges (
 ### Framework and Provider
 
 - **Framework**: PydanticAI for structured LLM interactions
-- **Provider**: Anthropic (Claude models)
-- **Primary Model**: Claude-3.5-Sonnet for complex reasoning and moderation
-- **Secondary Model**: Claude-3-Haiku for faster, simpler tasks
+- **Primary Provider**: Anthropic (Claude models)
+  - **Claude-3.5-Sonnet**: Moderation, Overlord chat, tagging
+  - **Claude-3-Haiku**: Faster, simpler tasks
+- **Secondary Provider**: OpenAI
+  - **Translation tasks**: Faster and more cost-efficient for multilingual support
 
 ### Integration Architecture
 
@@ -565,18 +644,31 @@ chat_agent = Agent(
 ### Overlord Capabilities
 
 1. **Content Moderation**
-   - Evaluate posts for logic, tone, and relevance
+   - Evaluate posts and topics for logic, tone, and relevance
    - Generate in-character feedback for calibrations
    - Assign appropriate tags to topics and posts
+   - Automatic approval/rejection (no manual admin step for MVP)
 
 2. **Chat Interface**
+   - Session-aware and role-aware responses (knows username, loyalty score, Graveyard count)
+   - No persistent memory across sessions in MVP
    - Answer questions about rules and policies
-   - Help users discover debates and topics
+   - Help users discover debates and topics using RAG over indexed content
    - Provide guidance on improving post quality
+   - Role-specific capabilities:
+     - Citizens: General guidance and commentary
+     - Moderators: Inline moderation actions via chat
+     - Admins & Super Admins: Elevated tools and actions
+   - Communicate sanctions and rate limits as chat messages
 
 3. **Tag Assignment**
    - Automatically categorize content based on themes
    - Maintain consistency in tagging across the platform
+   - Admins and Super Admins can override Overlord tag assignments
+
+4. **Translation Services**
+   - Translate non-English submissions to canonical English storage
+   - Persist translations to avoid repeat LLM calls
 
 ---
 

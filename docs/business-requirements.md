@@ -66,7 +66,8 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
   - The Overlord can create topics at will.
   - Citizens can create topics only if they are among the most loyal, as determined by the leaderboard. The exact threshold is a product control setting.
 - **Approval**
-  - All topics require Overlord approval before they appear publicly.
+  - Fully automatic via Overlord (LLM). No manual admin approval required for MVP.
+  - Uses same evaluation criteria as posts: logic, tone, relevance.
 - **Fields**
   - Title. Description. Author. Overlord-assigned tags.
 - **Behavior**
@@ -87,7 +88,7 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 - **Outcomes**
   - Approved. The post appears in the topic. The Overlord may attach a visible commentary block.
   - Calibrated. The Overlord returns specific feedback in-character. The user may edit and resubmit.
-  - Rejected. The post does not appear publicly. It is stored in the author’s private Graveyard and visible to admins and super admins. Moderators can also view rejected posts for anti-spam duties.
+  - Rejected. The post does not appear publicly. It is stored in the author's private Graveyard and visible to the author, moderators, admins, and super admins.
 
 ## Private Messages
 - **Direct messages**
@@ -110,10 +111,13 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
   - Approve. Reject. Calibrate with explicit guidance. Apply sanctions.
 - **Tags**
   - Assigns tags to topics and, when useful, to posts. Citizens cannot add or edit tags.
+  - Admins and Super Admins may override or edit tags assigned by the Overlord.
 
 ## Gamification and Public Reputation
 - **Loyalty Score**
-  - Definition. Approved posts minus rejected posts.
+  - Definition. (topics_created - topics_rejected) + (posts_created - posts_rejected) + (private_messages_created - private_messages_rejected).
+  - Updates. Real-time calculation with no caching needed for MVP.
+  - Storage. Stored in users table and recalculated on each moderation outcome.
   - Scope. Public. Shown on profile, registry, and leaderboard.
 - **Leaderboard**
   - Global leaderboard shows all citizens, ordered by Loyalty Score. Every citizen can see their rank.
@@ -138,9 +142,13 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 ## Appeals and Reporting
 - **Appeals**
   - Any rejected public post can be appealed by its author.
+  - Submission. Citizens submit appeals via chat with the Overlord.
+  - Confirmation. Overlord confirms receipt and enters appeal into queue.
+  - Review. Appeals reviewed outside of chat in dedicated dashboard (Phase 4).
   - Rate limit. One appeal submission per citizen per five minutes.
   - Reviewers. Moderators, admins, and super admins can adjudicate appeals.
   - Outcomes. If sustained, the post becomes visible and all stats update. If denied, a sanction is applied to discourage frivolous appeals.
+  - Delay messaging. If queues are backed up: "Your petition has been logged. Await review by the Central Committee."
 - **Reporting**
   - Any citizen can flag a post or topic for review.
   - Flags enter dedicated moderation queues and are adjudicated by moderators, admins, and super admins.
@@ -154,6 +162,9 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
   - Rate limiting to slow a citizen’s posting.
 - **Authority**
   - Moderators, admins, and super admins may apply sanctions. Super admins and admins can escalate and remove sanctions. Moderators cannot change roles or delete accounts.
+- **Communication**
+  - Overlord communicates rate limit warnings and sanctions via chat messages, not separate frontend alerts.
+  - Example: "Citizen, your rate of speech is restricted. Return later."
 
 ## Notifications
 - **Opt-in notifications**
@@ -166,7 +177,28 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 - **Code of Conduct**
   - Clear, accessible rules that reflect the moderation criteria and site culture.
 - **Ask the Overlord**
-  - A chat interface to ask about rules and to discover debates, tags, and citizens based on public arguments.
+  - A conversational interface for user guidance, discovery, rules explanation, and navigation.
+  - Uses RAG (Retrieval-Augmented Generation) over indexed public content for contextual responses.
+  - Can help find topics, posts, or citizens (e.g., "show debates on X").
+  - Responses may include links to relevant debates or profiles.
+  - Role-aware and session-aware (knows username, loyalty score, Graveyard count).
+  - No persistent memory across sessions in MVP.
+  - Role-specific capabilities:
+    - Citizens: General guidance and Overlord commentary
+    - Moderators: Inline moderation actions (approve, reject, sanction) via chat
+    - Admins & Super Admins: Same as moderators, plus elevated tools (role/tag adjustments)
+  - Proactive notifications delivered as messages from the Overlord (rate limits, sanctions).
+
+## Multilingual Support
+- **Canonical Storage**
+  - All posts are ultimately stored in English for consistency and moderation.
+- **Translation Flow**
+  - Posts submitted in other languages are automatically translated to English on ingestion.
+  - Translations are persisted in the database to avoid repeat LLM calls.
+  - Cached localized variants may also be stored for display optimization.
+- **Future Enhancement**
+  - Automatic translation of posts into user's preferred language for display.
+  - For MVP, only one translation per language is persisted.
 
 ## Data, Legal, and Policy
 - **Retention**
