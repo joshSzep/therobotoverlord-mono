@@ -277,24 +277,28 @@ class QueueRepository:
             worker_id=row['worker_id']
         )
     
-    async def add_to_post_queue(self, post_id: str, topic_id: str, priority_score: int = 0) -> QueueItem:
-        """Add post to moderation queue for specific topic"""
+    async def add_to_private_message_queue(self, message_id: str, sender_id: str, recipient_id: str, priority_score: int = 0) -> QueueItem:
+        """Add private message to moderation queue for specific conversation"""
+        # Calculate conversation_id for consistent queue naming
+        user_ids = sorted([sender_id, recipient_id])
+        conversation_id = f"users_{user_ids[0]}_{user_ids[1]}"
+        
         query = """
             WITH next_position AS (
                 SELECT COALESCE(MAX(position_in_queue), 0) + 1 as pos
-                FROM post_moderation_queue 
-                WHERE topic_id = $2
+                FROM private_message_queue 
+                WHERE conversation_id = $2
             )
-            INSERT INTO post_moderation_queue 
-            (post_id, topic_id, position_in_queue, priority_score, entered_queue_at)
-            SELECT $1, $2, pos, $3, NOW()
+            INSERT INTO private_message_queue 
+            (message_id, sender_id, recipient_id, conversation_id, position_in_queue, priority_score, entered_queue_at)
+            SELECT $1, $3, $4, $2, pos, $5, NOW()
             FROM next_position
             RETURNING *
         """
-        row = await db_pool.execute_one(query, post_id, topic_id, priority_score)
+        row = await db_pool.execute_one(query, message_id, conversation_id, sender_id, recipient_id, priority_score)
         return QueueItem(
             id=row['id'],
-            content_id=row['post_id'],
+            content_id=row['message_id'],
             priority_score=row['priority_score'],
             priority=row['priority'],
             position_in_queue=row['position_in_queue'],
@@ -323,6 +327,14 @@ class QueueRepository:
                 LIMIT 1
             """
             row = await db_pool.execute_one(query, context["topic_id"])
+        elif queue_type == "private_message_queue" and context.get("conversation_id"):
+            query = """
+                SELECT * FROM private_message_queue
+                WHERE conversation_id = $1 AND status = 'pending'
+                ORDER BY priority_score DESC, entered_queue_at ASC
+                LIMIT 1
+            """
+            row = await db_pool.execute_one(query, context["conversation_id"])
         else:
             return None
         
@@ -331,7 +343,7 @@ class QueueRepository:
         
         return QueueItem(
             id=row['id'],
-            content_id=row.get('topic_id') or row.get('post_id'),
+            content_id=row.get('topic_id') or row.get('post_id') or row.get('message_id'),
             priority_score=row['priority_score'],
             priority=row['priority'],
             position_in_queue=row['position_in_queue'],
@@ -379,6 +391,24 @@ class QueueRepository:
                     WHERE topic_id = $1 AND position_in_queue > $2
                 """
                 await db_pool.execute(update_query, removed['topic_id'], removed['position_in_queue'])
+        
+        elif queue_type == "private_message_queue":
+            # Remove and get position + conversation
+            removed_query = """
+                DELETE FROM private_message_queue 
+                WHERE message_id = $1 
+                RETURNING position_in_queue, conversation_id
+            """
+            removed = await db_pool.execute_one(removed_query, content_id)
+            
+            if removed:
+                # Update positions within conversation
+                update_query = """
+                    UPDATE private_message_queue 
+                    SET position_in_queue = position_in_queue - 1
+                    WHERE conversation_id = $1 AND position_in_queue > $2
+                """
+                await db_pool.execute(update_query, removed['conversation_id'], removed['position_in_queue'])
 ```
 
 ## Service Layer Integration

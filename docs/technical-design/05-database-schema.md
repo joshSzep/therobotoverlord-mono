@@ -119,6 +119,7 @@ CREATE TABLE private_message_queue (
     message_id UUID NOT NULL REFERENCES private_messages(id) ON DELETE CASCADE,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id VARCHAR(255) NOT NULL, -- Format: "users_{min_user_id}_{max_user_id}"
     priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
     position_in_queue INTEGER NOT NULL, -- Calculated queue position for user display
@@ -128,11 +129,10 @@ CREATE TABLE private_message_queue (
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
     worker_id VARCHAR(255),
     
-    -- Queue naming handled in application logic: queue_name = f"users_{min(sender_id, recipient_id)}_{max(sender_id, recipient_id)}"
-    INDEX idx_user_pair_priority (sender_id, recipient_id, priority_score),
+    INDEX idx_conversation_priority (conversation_id, priority_score DESC, entered_queue_at ASC),
     INDEX idx_status (status),
     INDEX idx_message (message_id),
-    INDEX idx_position (position_in_queue)
+    INDEX idx_conversation_position (conversation_id, position_in_queue)
 );
 ```
 
