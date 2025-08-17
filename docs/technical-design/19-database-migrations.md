@@ -154,11 +154,47 @@ step(
         worker_id VARCHAR(255)
     );
     
+    -- Post moderation queue
+    CREATE TABLE post_moderation_queue (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+        priority_score BIGINT NOT NULL,
+        priority INTEGER DEFAULT 0,
+        position_in_queue INTEGER NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
+        entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        estimated_completion_at TIMESTAMP WITH TIME ZONE,
+        worker_assigned_at TIMESTAMP WITH TIME ZONE,
+        worker_id VARCHAR(255)
+    );
+    
+    -- Private message queue
+    CREATE TABLE private_message_queue (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        message_id UUID NOT NULL REFERENCES private_messages(id) ON DELETE CASCADE,
+        sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        conversation_id VARCHAR(255) NOT NULL,
+        priority_score BIGINT NOT NULL,
+        priority INTEGER DEFAULT 0,
+        position_in_queue INTEGER NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
+        entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        estimated_completion_at TIMESTAMP WITH TIME ZONE,
+        worker_assigned_at TIMESTAMP WITH TIME ZONE,
+        worker_id VARCHAR(255)
+    );
+    
     -- Create indexes
     CREATE INDEX idx_topic_queue_priority ON topic_creation_queue(priority_score DESC, entered_queue_at ASC);
     CREATE INDEX idx_topic_queue_status ON topic_creation_queue(status);
+    CREATE INDEX idx_post_queue_topic_priority ON post_moderation_queue(topic_id, priority_score DESC, entered_queue_at ASC);
+    CREATE INDEX idx_post_queue_status ON post_moderation_queue(status);
+    CREATE INDEX idx_message_queue_conv_priority ON private_message_queue(conversation_id, priority_score DESC, entered_queue_at ASC);
+    CREATE INDEX idx_message_queue_status ON private_message_queue(status);
     """,
-    "DROP TABLE IF EXISTS topic_creation_queue;"
+    "DROP TABLE IF EXISTS private_message_queue; DROP TABLE IF EXISTS post_moderation_queue; DROP TABLE IF EXISTS topic_creation_queue;"
 )
 ```
 
