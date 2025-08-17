@@ -76,14 +76,15 @@ A satirical, AI-moderated debate arena where users, called citizens, argue insid
 ## Posts and Replies
 - **Submission**
   - Citizens can reply in any topic.
-  - Posts are displayed in chronological order. There are no upvotes or downvotes.
+  - Posts are displayed in chronological order by submission time. There are no upvotes or downvotes.
+  - Posts may be processed out of submission order for performance optimization, but final display always uses submission timestamp ordering.
 - **Evaluation**
   - Submissions enter specialized evaluation queues based on content type:
     - **Topic Creation Queue**: Global queue for all new topic proposals
     - **Post Moderation Queues**: Per-topic queues for posts within specific debates
-    - **Private Message Queues**: Per-conversation queues for private communications
+    - **Private Message Queues**: Per-conversation queues for private communications (processed sequentially to guarantee delivery order)
   - The queue system is rendered as a dynamic pneumatic tube network with branching paths. Each queue type has distinct visual styling and capsule colors.
-  - Queue updates are live and show real-time movement through the tube system.
+  - Queue updates are live and show real-time movement through the tube system, representing processing activity rather than final display order.
   - While content is waiting, the Overlord can stream in-character commentary to the author.
 - **Outcomes**
   - Approved. The post appears in the topic. The Overlord may attach a visible commentary block.

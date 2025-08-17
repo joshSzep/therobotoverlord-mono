@@ -457,9 +457,12 @@ CREATE TABLE posts (
     content TEXT NOT NULL, -- Canonical English storage only
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'calibrated', 'rejected')),
     overlord_feedback TEXT,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Used for chronological display ordering
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    approved_at TIMESTAMP WITH TIME ZONE
+    approved_at TIMESTAMP WITH TIME ZONE,
+    
+    INDEX idx_topic_submission_order (topic_id, submitted_at)
 );
 ```
 
@@ -696,7 +699,7 @@ CREATE TABLE user_permissions (
 - `GET /` - List topics (with search/tag filtering)
 - `POST /` - Create topic (citizens with permission only)
 - `GET /{topic_id}` - Get topic details
-- `GET /{topic_id}/posts` - Get posts in topic (paginated, chronological)
+- `GET /{topic_id}/posts` - Get posts in topic (paginated, chronological by submitted_at)
 
 ### Posts Endpoints (`/api/v1/posts/`)
 
@@ -832,6 +835,7 @@ class VisualizationController:
 - **Queue lengths are accurate** (users know exactly how many items ahead)
 - **Capsule movement is smooth** but not perfectly synchronized with processing
 - **Activity levels provide visual feedback** without performance cost
+- **Processing vs Display Order**: Tubes show processing activity order, not final display order
 - **Graceful degradation** under high load
 
 **Transport & Styling:**
@@ -913,11 +917,15 @@ QUEUE_CONFIG = {
     'total_workers': 2,  # Start minimal, scale up as needed
     'worker_distribution': {
         'global_topics': {'min': 1, 'max': 1},      # Always ensure topic approval
-        'topic_posts': {'min': 0, 'max': 2},        # Scale based on demand
-        'private_messages': {'min': 0, 'max': 1}    # Lower priority
+        'topic_posts': {'min': 0, 'max': 2},        # Scale based on demand, parallel processing allowed
+        'private_messages': {'min': 0, 'max': 1}    # Sequential processing per conversation pair
     },
     'circuit_breaker_threshold': timedelta(minutes=2),  # Quick reallocation
-    'configurable_scaling': True  # Support for N workers via config
+    'configurable_scaling': True,  # Support for N workers via config
+    'ordering_strategy': {
+        'posts': 'submission_time_display',  # Process in parallel, display by submitted_at
+        'private_messages': 'strict_fifo'    # Sequential processing to guarantee delivery order
+    }
 }
 ```
 
@@ -1005,8 +1013,8 @@ class FIFOFallbackProcessor:
     def __init__(self):
         self.processing_order = [
             'topic_creation_queue',
-            'post_moderation_queue', 
-            'private_message_queue'
+            'post_moderation_queue',  # Parallel processing allowed, display ordered by submitted_at
+            'private_message_queue'   # Sequential processing per conversation pair
         ]
     
     async def process_all_queues(self):
