@@ -261,9 +261,10 @@ CREATE TABLE moderation_events (
     moderator_id UUID REFERENCES users(id), -- NULL for AI moderation
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    INDEX idx_user_events (user_id, created_at),
+    INDEX idx_user_events (user_id, created_at DESC),
     INDEX idx_content (content_type, content_id),
-    INDEX idx_event_type (event_type)
+    INDEX idx_event_type (event_type),
+    INDEX idx_outcome_content (outcome, content_type)
 );
 ```
 
@@ -285,9 +286,63 @@ CREATE TABLE translations (
 );
 ```
 
+## Materialized Views
+
+### User Leaderboard View
+
+```sql
+-- Materialized view for efficient leaderboard queries
+CREATE MATERIALIZED VIEW user_leaderboard AS
+SELECT 
+    u.id as user_id,
+    u.username,
+    u.loyalty_score,
+    ROW_NUMBER() OVER (ORDER BY u.loyalty_score DESC, u.created_at ASC) as rank,
+    CASE 
+        WHEN ROW_NUMBER() OVER (ORDER BY u.loyalty_score DESC, u.created_at ASC) <= 
+             (SELECT COUNT(*) * 0.1 FROM users WHERE loyalty_score > 0) 
+        THEN true 
+        ELSE false 
+    END as can_create_topics,
+    u.created_at,
+    u.updated_at
+FROM users u
+WHERE u.loyalty_score > 0
+ORDER BY u.loyalty_score DESC, u.created_at ASC;
+
+-- Indexes for materialized view
+CREATE UNIQUE INDEX idx_leaderboard_user_id ON user_leaderboard(user_id);
+CREATE INDEX idx_leaderboard_rank ON user_leaderboard(rank);
+CREATE INDEX idx_leaderboard_score ON user_leaderboard(loyalty_score DESC);
+CREATE INDEX idx_leaderboard_topic_creators ON user_leaderboard(can_create_topics) WHERE can_create_topics = true;
+```
+
+## Performance Indexes
+
+### Core Performance Indexes
+
+```sql
+-- Users table optimization
+CREATE INDEX idx_users_loyalty_score_desc ON users(loyalty_score DESC) WHERE loyalty_score > 0;
+CREATE INDEX idx_users_loyalty_username ON users(loyalty_score DESC, username) WHERE loyalty_score > 0;
+CREATE INDEX idx_users_username ON users(username) WHERE loyalty_score > 0;
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- Queue operations optimization
+CREATE INDEX idx_topic_queue_position ON topic_creation_queue(position_in_queue);
+CREATE INDEX idx_topic_queue_priority ON topic_creation_queue(priority_score DESC, entered_queue_at ASC);
+
+CREATE INDEX idx_post_queue_topic_position ON post_moderation_queue(topic_id, position_in_queue);
+CREATE INDEX idx_post_queue_topic_priority ON post_moderation_queue(topic_id, priority_score DESC, entered_queue_at ASC);
+
+CREATE INDEX idx_message_queue_conv_position ON private_message_queue(conversation_id, position_in_queue);
+CREATE INDEX idx_message_queue_conv_priority ON private_message_queue(conversation_id, priority_score DESC, entered_queue_at ASC);
+```
+
 ---
 
 **Related Documentation:**
 - [RBAC & Permissions](./08-rbac-permissions.md) - Permission system tables
 - [Loyalty Scoring System](./09-loyalty-scoring.md) - Event sourcing implementation
 - [Multilingual System](./10-multilingual.md) - Translation table usage
+- [Database Performance Optimization](./17-database-performance-optimization.md) - Performance optimization strategies

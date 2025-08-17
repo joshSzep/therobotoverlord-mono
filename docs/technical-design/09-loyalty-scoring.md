@@ -49,22 +49,46 @@ class LoyaltyScoreService:
         return loyalty_score
     
     async def record_moderation_event(self, user_id: str, event_type: str, content_type: str, content_id: str, outcome: str):
-        # Store event with outcome
-        await self.db.moderation_events.create({
-            "user_id": user_id,
-            "event_type": event_type,
-            "content_type": content_type,
-            "content_id": content_id,
-            "outcome": outcome
-        })
+        # Calculate score delta for incremental update
+        score_delta = self._calculate_score_delta(content_type, outcome)
         
-        # Invalidate cache and update user record
-        await self.redis.delete(f"loyalty:{user_id}")
-        new_score = await self.get_loyalty_score(user_id)
-        await self.db.users.filter(id=user_id).update(loyalty_score=new_score)
+        # Atomic database update with incremental score change
+        result = await self.db.execute("""
+            UPDATE users 
+            SET loyalty_score = loyalty_score + $1,
+                updated_at = NOW()
+            WHERE id = $2
+            RETURNING loyalty_score
+        """, [score_delta, user_id])
+        
+        new_score = result[0]["loyalty_score"]
+        
+        # Update Redis cache
+        await self.redis.set(f"loyalty:{user_id}", new_score, ex=3600)
+        
+        # Store event for audit trail
+        await self.db.execute("""
+            INSERT INTO moderation_events 
+            (user_id, event_type, content_type, content_id, outcome)
+            VALUES ($1, $2, $3, $4, $5)
+        """, [user_id, event_type, content_type, content_id, outcome])
         
         # Trigger permission updates
         await self.update_dynamic_permissions(user_id)
+        
+        return new_score
+    
+    def _calculate_score_delta(self, content_type: str, outcome: str) -> int:
+        """Calculate incremental score change"""
+        multipliers = {"post": 1, "topic": 5, "private_message": 1}
+        base_score = multipliers.get(content_type, 1)
+        
+        if outcome == "approved":
+            return base_score
+        elif outcome == "rejected":
+            return -base_score
+        else:  # calibrated
+            return 0
 ```
 
 ## Algorithm Properties
