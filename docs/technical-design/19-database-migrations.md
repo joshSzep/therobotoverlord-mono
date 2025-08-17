@@ -428,6 +428,76 @@ step(
 )
 ```
 
+### RBAC System Migration
+
+```python
+# migrations/0005.add-rbac-system.py
+from yoyo import step
+
+step(
+    """
+    -- Roles table (static roles)
+    CREATE TABLE roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(50) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Permissions table (granular capabilities)
+    CREATE TABLE permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        is_dynamic BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Role permissions (static assignments)
+    CREATE TABLE role_permissions (
+        role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        PRIMARY KEY (role_id, permission_id)
+    );
+    
+    -- User permissions (dynamic overrides and loyalty-based grants)
+    CREATE TABLE user_permissions (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+        granted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        expires_at TIMESTAMP WITH TIME ZONE,
+        granted_by_event VARCHAR(50),
+        granted_by_user_id UUID REFERENCES users(id),
+        is_active BOOLEAN DEFAULT TRUE,
+        
+        PRIMARY KEY (user_id, permission_id)
+    );
+    
+    -- Create indexes for RBAC tables
+    CREATE INDEX idx_roles_name ON roles(name);
+    
+    CREATE INDEX idx_permissions_name ON permissions(name);
+    CREATE INDEX idx_permissions_dynamic ON permissions(is_dynamic) WHERE is_dynamic = true;
+    
+    CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
+    CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id);
+    
+    CREATE INDEX idx_user_permissions_user_id ON user_permissions(user_id);
+    CREATE INDEX idx_user_permissions_permission_id ON user_permissions(permission_id);
+    CREATE INDEX idx_user_permissions_active ON user_permissions(is_active) WHERE is_active = true;
+    CREATE INDEX idx_user_permissions_expires ON user_permissions(expires_at) WHERE expires_at IS NOT NULL;
+    CREATE INDEX idx_user_permissions_event ON user_permissions(granted_by_event);
+    """,
+    """
+    DROP TABLE IF EXISTS user_permissions;
+    DROP TABLE IF EXISTS role_permissions;
+    DROP TABLE IF EXISTS permissions;
+    DROP TABLE IF EXISTS roles;
+    """
+)
+```
+
 ---
 
 **Related Documentation:**
