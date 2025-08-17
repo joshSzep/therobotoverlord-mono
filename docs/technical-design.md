@@ -107,7 +107,7 @@ This document captures all technical design decisions made so far. It is a livin
         
     - `authz_ver`: bumped on role/ban changes
         
-    - `can_create_topics`: boolean
+    - `permissions`: array of permission names (e.g., ["create_topics", "moderate_posts"])
         
     - `scopes`: array (reserved for future use)
         
@@ -213,35 +213,47 @@ This document captures all technical design decisions made so far. It is a livin
 5. **Moderation**: Overlord evaluates English version
 6. **Display**: Show appropriate version based on context
 
-**Translation Table (Future):**
-```sql
-CREATE TABLE translations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    content_id UUID NOT NULL, -- References posts.id or topics.id
-    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('post', 'topic')),
-    language_code VARCHAR(10) NOT NULL, -- ISO language code
-    translated_content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(content_id, content_type, language_code)
-);
-```
+**Translation Flow (Updated):**
+1. **Content Ingestion**: Posts submitted in any language
+2. **Language Detection**: Automatic detection of non-English content
+3. **Translation to English**: OpenAI API for canonical storage
+4. **Persistence**: Store original in translations table, English in main content tables
+5. **Moderation**: Overlord evaluates English version only
+6. **Display**: Show appropriate version based on user preference (future enhancement)
 
-**OpenAI Integration:**
+**Event-Driven Loyalty Score System:**
 ```python
-# Translation service using OpenAI
-class TranslationService:
-    def __init__(self):
-        self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# Loyalty score calculation via event sourcing
+class LoyaltyScoreService:
+    def __init__(self, redis_client, db_client):
+        self.redis = redis_client
+        self.db = db_client
     
-    async def translate_to_english(self, content: str, source_language: str) -> str:
-        response = await self.openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Translate the following text to English, preserving meaning and tone."},
-                {"role": "user", "content": content}
-            ]
-        )
-        return response.choices[0].message.content
+    async def get_loyalty_score(self, user_id: str) -> int:
+        # Check Redis cache first
+        cached_score = await self.redis.get(f"loyalty:{user_id}")
+        if cached_score is not None:
+            return int(cached_score)
+        
+        # Calculate from events if cache miss
+        score = await self.calculate_from_events(user_id)
+        await self.redis.setex(f"loyalty:{user_id}", 3600, score)  # Cache for 1 hour
+        return score
+    
+    async def record_moderation_event(self, user_id: str, event_type: str, content_id: str, points_delta: int):
+        # Store event
+        await self.db.moderation_events.create({
+            "user_id": user_id,
+            "event_type": event_type,
+            "content_id": content_id,
+            "points_delta": points_delta
+        })
+        
+        # Invalidate cache
+        await self.redis.delete(f"loyalty:{user_id}")
+        
+        # Trigger permission updates
+        await self.update_dynamic_permissions(user_id)
 ```
 
 ---
@@ -339,21 +351,13 @@ CREATE TABLE users (
     google_id VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('citizen', 'moderator', 'admin', 'superadmin')),
-    loyalty_score INTEGER DEFAULT 0, -- Real-time: (topics_created - topics_rejected) + (posts_created - posts_rejected) + (private_messages_created - private_messages_rejected)
-    approved_posts_count INTEGER DEFAULT 0,
-    rejected_posts_count INTEGER DEFAULT 0,
-    topics_created_count INTEGER DEFAULT 0,
-    topics_rejected_count INTEGER DEFAULT 0,
-    private_messages_created_count INTEGER DEFAULT 0,
-    private_messages_rejected_count INTEGER DEFAULT 0,
-    can_create_topics BOOLEAN DEFAULT FALSE,
+    loyalty_score INTEGER DEFAULT 0, -- Cached from moderation_events, updated via event-driven system
     is_banned BOOLEAN DEFAULT FALSE,
     is_sanctioned BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
+);````
 
 ### Sanctions Table
 
@@ -417,9 +421,7 @@ CREATE TABLE posts (
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
     parent_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL, -- Canonical English storage
-    original_content TEXT, -- Original submission if translated
-    original_language VARCHAR(10), -- ISO language code if translated
+    content TEXT NOT NULL, -- Canonical English storage only
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'calibrated', 'rejected')),
     overlord_feedback TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -434,15 +436,16 @@ CREATE TABLE posts (
 CREATE TABLE topic_creation_queue (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    queue_position INTEGER NOT NULL,
+    priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
     worker_id VARCHAR(255),
     
-    UNIQUE(queue_position),
-    INDEX idx_position (queue_position),
+    INDEX idx_priority_score (priority_score),
+    INDEX idx_status (status),
     INDEX idx_topic (topic_id)
 );
 ```
@@ -454,15 +457,16 @@ CREATE TABLE post_moderation_queue (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
     topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    queue_position INTEGER NOT NULL,
+    priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
     worker_id VARCHAR(255),
     
-    UNIQUE(topic_id, queue_position),
-    INDEX idx_topic_position (topic_id, queue_position),
+    INDEX idx_topic_priority (topic_id, priority_score),
+    INDEX idx_status (status),
     INDEX idx_post (post_id)
 );
 ```
@@ -475,17 +479,18 @@ CREATE TABLE private_message_queue (
     message_id UUID NOT NULL REFERENCES private_messages(id) ON DELETE CASCADE,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    queue_position INTEGER NOT NULL,
+    priority_score BIGINT NOT NULL, -- Timestamp + priority offset for ordering
     priority INTEGER DEFAULT 0,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'processing', 'completed')) DEFAULT 'pending',
     entered_queue_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     estimated_completion_at TIMESTAMP WITH TIME ZONE,
     worker_assigned_at TIMESTAMP WITH TIME ZONE,
     worker_id VARCHAR(255),
     
-    -- Ensure consistent ordering of user pairs
-    CONSTRAINT chk_user_order CHECK (sender_id < recipient_id OR sender_id > recipient_id),
-    UNIQUE(sender_id, recipient_id, queue_position),
-    INDEX idx_user_pair_position (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id), queue_position),
+    -- Ensure consistent ordering of user pairs (smaller UUID first)
+    CONSTRAINT chk_user_order CHECK (sender_id < recipient_id),
+    INDEX idx_user_pair_priority (sender_id, recipient_id, priority_score),
+    INDEX idx_status (status),
     INDEX idx_message (message_id)
 );
 ```
@@ -557,6 +562,87 @@ CREATE TABLE user_badges (
     awarded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     awarded_for_post_id UUID REFERENCES posts(id),
     PRIMARY KEY (user_id, badge_id, awarded_at)
+);
+```
+
+### Moderation Events Table (Event-Sourced Loyalty Scoring)
+
+```sql
+CREATE TABLE moderation_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_type VARCHAR(50) NOT NULL, -- 'topic_approved', 'post_rejected', 'private_message_approved', etc.
+    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('topic', 'post', 'private_message')),
+    content_id UUID NOT NULL, -- references posts.id, topics.id, or private_messages.id
+    points_delta INTEGER NOT NULL, -- +1 for approval, -1 for rejection
+    moderator_id UUID REFERENCES users(id), -- NULL for AI moderation
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    INDEX idx_user_events (user_id, created_at),
+    INDEX idx_content (content_type, content_id),
+    INDEX idx_event_type (event_type)
+);
+```
+
+### Translations Table (Multilingual Support)
+
+```sql
+CREATE TABLE translations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content_id UUID NOT NULL, -- References posts.id, topics.id, or private_messages.id
+    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('post', 'topic', 'private_message')),
+    language_code VARCHAR(10) NOT NULL, -- ISO language code
+    original_content TEXT NOT NULL, -- Original submission before translation
+    translated_content TEXT NOT NULL, -- English translation
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(content_id, content_type, language_code),
+    INDEX idx_content (content_type, content_id),
+    INDEX idx_language (language_code)
+);
+```
+
+### RBAC System Tables
+
+```sql
+-- Roles table (static roles)
+CREATE TABLE roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(50) NOT NULL UNIQUE, -- 'citizen', 'moderator', 'admin', 'superadmin'
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Permissions table (granular capabilities)
+CREATE TABLE permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE, -- 'create_topics', 'moderate_posts', 'view_graveyard', etc.
+    description TEXT,
+    is_dynamic BOOLEAN DEFAULT FALSE, -- true for loyalty-based permissions like 'create_topics'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Role permissions (static assignments)
+CREATE TABLE role_permissions (
+    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (role_id, permission_id)
+);
+
+-- User permissions (dynamic overrides and loyalty-based grants)
+CREATE TABLE user_permissions (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    granted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE, -- for temporary permissions
+    granted_by_event VARCHAR(50), -- 'loyalty_threshold', 'admin_grant', 'sanction_removal', etc.
+    granted_by_user_id UUID REFERENCES users(id), -- admin who granted permission
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    PRIMARY KEY (user_id, permission_id),
+    INDEX idx_user_active (user_id, is_active),
+    INDEX idx_expires (expires_at)
 );
 ```
 
