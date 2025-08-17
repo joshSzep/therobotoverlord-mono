@@ -4,7 +4,8 @@
 
 - **PostgreSQL 17** (Render managed)
 - **Extensions enabled**: `pgvector`, `citext`
-- **Migrations**: Tortoise ORM with Aerich
+- **Database Access**: Raw SQL with asyncpg
+- **Migrations**: Custom migration system
 
 ## Core Tables
 
