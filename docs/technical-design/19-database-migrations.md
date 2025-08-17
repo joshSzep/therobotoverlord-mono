@@ -245,6 +245,189 @@ def create_leaderboard_view(conn):
 step(create_leaderboard_view, "DROP MATERIALIZED VIEW IF EXISTS user_leaderboard;")
 ```
 
+### Governance Tables Migration
+
+```python
+# migrations/0004.add-governance-tables.py
+from yoyo import step
+
+step(
+    """
+    -- Appeals table
+    CREATE TABLE appeals (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        appellant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reason TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'sustained', 'denied')),
+        reviewed_by UUID REFERENCES users(id),
+        reviewed_at TIMESTAMP WITH TIME ZONE,
+        review_notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Flags table
+    CREATE TABLE flags (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+        topic_id UUID REFERENCES topics(id) ON DELETE CASCADE,
+        flagger_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reason TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'sustained', 'dismissed')) DEFAULT 'pending',
+        reviewed_by UUID REFERENCES users(id),
+        reviewed_at TIMESTAMP WITH TIME ZONE,
+        review_notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        
+        CONSTRAINT flags_content_check CHECK (
+            (post_id IS NOT NULL AND topic_id IS NULL) OR 
+            (post_id IS NULL AND topic_id IS NOT NULL)
+        )
+    );
+    
+    -- Sanctions table
+    CREATE TABLE sanctions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL CHECK (type IN ('posting_freeze', 'rate_limit')),
+        applied_by UUID NOT NULL REFERENCES users(id),
+        applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        expires_at TIMESTAMP WITH TIME ZONE,
+        reason TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE
+    );
+    
+    -- Private messages table
+    CREATE TABLE private_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+        overlord_feedback TEXT,
+        sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        approved_at TIMESTAMP WITH TIME ZONE
+    );
+    
+    -- Tags table
+    CREATE TABLE tags (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) NOT NULL UNIQUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Topic_tags junction table
+    CREATE TABLE topic_tags (
+        topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+        tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+        assigned_by UUID NOT NULL REFERENCES users(id),
+        assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        PRIMARY KEY (topic_id, tag_id)
+    );
+    
+    -- Badges table
+    CREATE TABLE badges (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT NOT NULL,
+        image_url VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- User_badges junction table
+    CREATE TABLE user_badges (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        badge_id UUID NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
+        awarded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        awarded_for_post_id UUID REFERENCES posts(id),
+        PRIMARY KEY (user_id, badge_id, awarded_at)
+    );
+    
+    -- Moderation events table
+    CREATE TABLE moderation_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        event_type VARCHAR(50) NOT NULL,
+        content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('topic', 'post', 'private_message')),
+        content_id UUID NOT NULL,
+        outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected', 'calibrated')),
+        moderator_id UUID REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Translations table
+    CREATE TABLE translations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        content_id UUID NOT NULL,
+        content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('post', 'topic', 'private_message')),
+        language_code VARCHAR(10) NOT NULL,
+        original_content TEXT NOT NULL,
+        translated_content TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        
+        UNIQUE(content_id, content_type, language_code)
+    );
+    
+    -- Create indexes for governance tables
+    CREATE INDEX idx_appeals_post_id ON appeals(post_id);
+    CREATE INDEX idx_appeals_appellant_id ON appeals(appellant_id);
+    CREATE INDEX idx_appeals_status ON appeals(status);
+    CREATE INDEX idx_appeals_reviewed_by ON appeals(reviewed_by) WHERE reviewed_by IS NOT NULL;
+    
+    CREATE INDEX idx_flags_post_id ON flags(post_id) WHERE post_id IS NOT NULL;
+    CREATE INDEX idx_flags_topic_id ON flags(topic_id) WHERE topic_id IS NOT NULL;
+    CREATE INDEX idx_flags_flagger_id ON flags(flagger_id);
+    CREATE INDEX idx_flags_status ON flags(status);
+    CREATE INDEX idx_flags_reviewed_by ON flags(reviewed_by) WHERE reviewed_by IS NOT NULL;
+    CREATE INDEX idx_flags_created_at ON flags(created_at);
+    
+    CREATE INDEX idx_sanctions_user_id ON sanctions(user_id);
+    CREATE INDEX idx_sanctions_type ON sanctions(type);
+    CREATE INDEX idx_sanctions_applied_by ON sanctions(applied_by);
+    CREATE INDEX idx_sanctions_active ON sanctions(is_active) WHERE is_active = true;
+    CREATE INDEX idx_sanctions_expires_at ON sanctions(expires_at) WHERE expires_at IS NOT NULL;
+    
+    CREATE INDEX idx_private_messages_sender_id ON private_messages(sender_id);
+    CREATE INDEX idx_private_messages_recipient_id ON private_messages(recipient_id);
+    CREATE INDEX idx_private_messages_status ON private_messages(status);
+    CREATE INDEX idx_private_messages_sent_at ON private_messages(sent_at);
+    
+    CREATE INDEX idx_tags_name ON tags(name);
+    
+    CREATE INDEX idx_topic_tags_topic_id ON topic_tags(topic_id);
+    CREATE INDEX idx_topic_tags_tag_id ON topic_tags(tag_id);
+    CREATE INDEX idx_topic_tags_assigned_by ON topic_tags(assigned_by);
+    
+    CREATE INDEX idx_badges_name ON badges(name);
+    
+    CREATE INDEX idx_user_badges_user_id ON user_badges(user_id);
+    CREATE INDEX idx_user_badges_badge_id ON user_badges(badge_id);
+    CREATE INDEX idx_user_badges_awarded_at ON user_badges(awarded_at);
+    CREATE INDEX idx_user_badges_post_id ON user_badges(awarded_for_post_id) WHERE awarded_for_post_id IS NOT NULL;
+    
+    CREATE INDEX idx_moderation_events_user_events ON moderation_events(user_id, created_at DESC);
+    CREATE INDEX idx_moderation_events_content ON moderation_events(content_type, content_id);
+    CREATE INDEX idx_moderation_events_event_type ON moderation_events(event_type);
+    CREATE INDEX idx_moderation_events_outcome_content ON moderation_events(outcome, content_type);
+    
+    CREATE INDEX idx_translations_content ON translations(content_type, content_id);
+    CREATE INDEX idx_translations_language ON translations(language_code);
+    """,
+    """
+    DROP TABLE IF EXISTS translations;
+    DROP TABLE IF EXISTS moderation_events;
+    DROP TABLE IF EXISTS user_badges;
+    DROP TABLE IF EXISTS badges;
+    DROP TABLE IF EXISTS topic_tags;
+    DROP TABLE IF EXISTS tags;
+    DROP TABLE IF EXISTS private_messages;
+    DROP TABLE IF EXISTS sanctions;
+    DROP TABLE IF EXISTS flags;
+    DROP TABLE IF EXISTS appeals;
+    """
+)
+```
+
 ---
 
 **Related Documentation:**

@@ -178,6 +178,14 @@ CREATE TABLE flags (
         (post_id IS NULL AND topic_id IS NOT NULL)
     )
 );
+
+-- Indexes for flags
+CREATE INDEX idx_flags_post_id ON flags(post_id) WHERE post_id IS NOT NULL;
+CREATE INDEX idx_flags_topic_id ON flags(topic_id) WHERE topic_id IS NOT NULL;
+CREATE INDEX idx_flags_flagger_id ON flags(flagger_id);
+CREATE INDEX idx_flags_status ON flags(status);
+CREATE INDEX idx_flags_reviewed_by ON flags(reviewed_by) WHERE reviewed_by IS NOT NULL;
+CREATE INDEX idx_flags_created_at ON flags(created_at);
 ```
 
 ### Sanctions Table
