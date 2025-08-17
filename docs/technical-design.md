@@ -219,7 +219,9 @@ This document captures all technical design decisions made so far. It is a livin
 3. **Translation to English**: OpenAI API for canonical storage
 4. **Persistence**: Store original in translations table, English in main content tables
 5. **Moderation**: Overlord evaluates English version only
-6. **Display**: Show appropriate version based on user preference (future enhancement)
+6. **Appeals Process**: Display both original and translated versions to users and moderators
+7. **Translation Quality**: Poor translation quality can be grounds for successful appeals
+8. **Display**: Show appropriate version based on user preference (future enhancement)
 
 **Event-Driven Loyalty Score System:**
 ```python
@@ -791,6 +793,12 @@ chat_agent = Agent(
    - Translate non-English submissions to canonical English storage
    - Persist translations to avoid repeat LLM calls
 
+5. **Private Message Moderation**
+   - Uses identical evaluation criteria as public posts (logic, tone, relevance)
+   - Same AI agent and prompts as public content moderation
+   - Moderation outcomes contribute equally to loyalty scores
+   - Appeals process identical to public posts
+
 ---
 
 ## Real-time Streaming
@@ -835,7 +843,8 @@ class VisualizationController:
 - **Queue lengths are accurate** (users know exactly how many items ahead)
 - **Capsule movement is smooth** but not perfectly synchronized with processing
 - **Activity levels provide visual feedback** without performance cost
-- **Processing vs Display Order**: Tubes show processing activity order, not final display order
+- **Sequential Processing Visualization**
+  - Per-topic tubes show sequential processing within each topic to guarantee chronological order. Multiple topic tubes operate in parallel, showing that debates in different topics can proceed independently while maintaining order within each topic.
 - **Graceful degradation** under high load
 
 **Transport & Styling:**
@@ -849,6 +858,11 @@ class VisualizationController:
 - **Performance**: Same payload regardless of user count, updates batched for efficiency
 
 ### Event Schema
+
+**Permission-Based Content Filtering:**
+- `preview` field is conditionally populated based on user permissions
+- Citizens and anonymous users receive `null` for preview content
+- Only moderators with `content_preview` permission see actual content
 
 ```json
 {
@@ -878,7 +892,7 @@ class VisualizationController:
             "position": 1,
             "content_type": "post",
             "author": "citizen_name",
-            "preview": "I believe that AI should...",
+            "preview": null, // Only populated for users with content_preview permission
             "timestamp": "2025-01-01T12:01:00Z",
             "estimated_completion": "2025-01-01T12:03:00Z"
           }
@@ -917,13 +931,13 @@ QUEUE_CONFIG = {
     'total_workers': 2,  # Start minimal, scale up as needed
     'worker_distribution': {
         'global_topics': {'min': 1, 'max': 1},      # Always ensure topic approval
-        'topic_posts': {'min': 0, 'max': 2},        # Scale based on demand, parallel processing allowed
+        'topic_posts': {'min': 0, 'max': 1},        # Sequential processing per topic to guarantee chronological order
         'private_messages': {'min': 0, 'max': 1}    # Sequential processing per conversation pair
     },
     'circuit_breaker_threshold': timedelta(minutes=2),  # Quick reallocation
     'configurable_scaling': True,  # Support for N workers via config
     'ordering_strategy': {
-        'posts': 'submission_time_display',  # Process in parallel, display by submitted_at
+        'posts': 'strict_fifo_per_topic',    # Sequential processing per topic to guarantee chronological display
         'private_messages': 'strict_fifo'    # Sequential processing to guarantee delivery order
     }
 }
@@ -1013,7 +1027,7 @@ class FIFOFallbackProcessor:
     def __init__(self):
         self.processing_order = [
             'topic_creation_queue',
-            'post_moderation_queue',  # Parallel processing allowed, display ordered by submitted_at
+            'post_moderation_queue',  # Sequential processing per topic to guarantee chronological display
             'private_message_queue'   # Sequential processing per conversation pair
         ]
     
