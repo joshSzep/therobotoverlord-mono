@@ -1,18 +1,27 @@
-# Authentication and Authorization
+# Authentication
 
-## Model
+## JWT-Based Authentication
 
-**JWT-based auth** with asymmetric signing keys (RS256/ES256)
+### Token Lifetimes
+- **Access Token**: 1 hour base lifetime, extendable to 8 hours maximum
+- **Refresh Token**: 14 days
+
+### Activity-Based Token Extension Strategy
+- Access tokens extend by 30 minutes per user activity
+- Maximum token lifetime: 8 hours from initial issue
+- Extension triggers: API calls, WebSocket activity, page navigation
+- Refresh token rotation on each use
+- Secure httpOnly cookies for token storage
 
 ## Access Tokens
 
-- **Lifetime**: 15 minutes (optimized for user experience)
 - **Storage**: httpOnly, Secure cookie (`__Secure-trl_at`)
 - **Domain**: `.therobotoverlord.com`
 - **Path**: `/`
 - **SameSite**: Lax
-- **Expiration**: matches 15 minutes
-- **Activity Extension**: Automatically refreshed on user activity within 5 minutes of expiry
+- **Base Expiration**: 1 hour from issue
+- **Activity Extension**: +30 minutes per activity, max 8 hours total
+- **Extension Triggers**: API requests, WebSocket messages, page navigation
 
 ## Refresh Tokens
 

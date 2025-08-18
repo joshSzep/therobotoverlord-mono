@@ -2,63 +2,53 @@
 
 ## Overview
 
-The Robot Overlord API uses URL-based versioning with semantic version numbers to ensure backward compatibility and smooth evolution of the platform while maintaining client stability.
+The Robot Overlord API uses a V1-only evolution strategy where `/api/v1` is the single, continuously evolving API version. The version prefix exists purely for future-proofing in case a complete API redesign is ever needed.
 
-## Versioning Scheme
+## Versioning Philosophy
 
-### URL Structure
-```
-/api/v{major}
-```
+### V1 Evolution Approach
+- **Single Version**: v1 is the only version that will exist during normal evolution
+- **Continuous Evolution**: v1 evolves with backward-compatible changes only
+- **Future-Proofing**: Version prefix allows for potential v2 if complete redesign needed
+- **No Version Proliferation**: Avoid creating v2, v3, etc. for normal feature additions
 
-### Version Examples
-- `/api/v1` - Initial major version
-- `/api/v2` - Major version with breaking changes
-- `/api/v3` - Next major version
-
-## Version Types
-
-### Major Versions (v1, v2, v3...)
-**All changes are considered major versions:**
-- New endpoints and features
-- Removal of endpoints or fields
-- Changes to response structure
-- Authentication method changes
-- Parameter requirement changes
-- Data type modifications
+### Allowed Changes in V1
+**Backward-Compatible Additions:**
+- New endpoints
 - New optional parameters
-- Enhanced functionality
+- Additional response fields
+- Enhanced functionality that doesn't break existing clients
+- New features that extend existing capabilities
 
-**Examples:**
-- Adding new queue status endpoints
-- Changing user ID from integer to UUID
-- Removing deprecated endpoints
-- Restructuring response objects
-- Including additional metadata in responses
-- New Overlord chat capabilities
+**Prohibited Changes:**
+- Removing endpoints or required fields
+- Changing response structure in breaking ways
+- Modifying authentication methods
+- Changing required parameter types
+- Any change that breaks existing client implementations
 
 ## Implementation Strategy
 
 ### Current Version Support
-- **Latest Version**: Always fully supported with new features
-- **Previous Major**: Supported for 12 months after new major release
-- **Legacy Versions**: 6-month deprecation notice before removal
+- **V1**: Continuously supported and evolved
+- **Future V2**: Only if complete API redesign becomes necessary
+- **No Multiple Versions**: Avoid maintaining multiple API versions simultaneously
 
 ### Version Lifecycle
 ```
-v1 → v2 → v3
- ↓    ↓    ↓
-Active Active Active
-     ↓    ↓
-  Deprecated Active
-     ↓    ↓
-  Removed Active
+v1 (continuous evolution)
+ ↓
+v1 + new features (backward compatible)
+ ↓
+v1 + more features (backward compatible)
+ ↓
+(Only if complete redesign needed: v2)
 ```
 
 ### Default Version Behavior
-- **No version specified**: Routes to latest stable version (currently v1)
+- **No version specified**: Routes to v1
 - **Invalid version**: Returns 404 with available versions
-- **Deprecated version**: Returns deprecation warning in response headers
+- **V1 specified**: Normal operation
 
 ## API Structure
 
@@ -67,44 +57,65 @@ Active Active Active
 https://api.therobotoverlord.com/api/v1
 ```
 
-### Version-Specific Routing
+### V1-Only Routing
 ```python
-# FastAPI router structure
-app.include_router(v1_router, prefix="/api/v1")
-app.include_router(v2_router, prefix="/api/v2")
-app.include_router(v3_router, prefix="/api/v3")
+# Single version router with future-proofing
+from fastapi import APIRouter, HTTPException
+
+# Main API router
+api_router = APIRouter()
+
+# Include all endpoints under v1
+app.include_router(api_router, prefix="/api/v1", tags=["v1"])
+app.include_router(api_router, prefix="/api", tags=["default"])  # Default to v1
+
+# Version validation middleware
+async def version_middleware(request: Request):
+    version = extract_version_from_path(request.url.path)
+    if version and version != "v1":
+        raise HTTPException(
+            status_code=404, 
+            detail=f"API version {version} not supported. Only v1 is available."
+        )
+    return "v1"
 ```
 
 ### Shared Components
-Common functionality shared across versions:
+All functionality uses shared components:
 - Authentication middleware
 - Rate limiting
 - Error handling
 - Logging and monitoring
 - Database access layer
 
-## Version-Specific Features
+## V1 Feature Evolution
 
-### v1 (Initial Release)
+### Current V1 Features
 - Core forum functionality
-- Basic moderation queues
-- User authentication
+- Moderation queues with FIFO processing
+- JWT-based authentication with activity extension
 - Topic and post management
-- Overlord chat basic features
+- Overlord chat interface
+- Real-time WebSocket updates
+- Loyalty scoring system
+- Multi-queue architecture
 
-### v2 (Planned)
+### V1 Evolution Roadmap
+**Phase 1 Additions (Backward Compatible):**
 - Enhanced queue status endpoints
 - Additional user profile fields
-- Improved search capabilities
-- Extended Overlord chat features
-- Mobile-optimized responses
-- Advanced AI moderation features
+- Mobile-optimized response formats
+- Extended Overlord chat capabilities
 
-### v3 (Future)
-- Real-time collaboration tools
+**Phase 2 Additions (Backward Compatible):**
+- Advanced search and filtering
+- Performance optimizations
 - Enhanced analytics endpoints
 - Improved multilingual support
-- Performance optimizations
+
+**Future Considerations:**
+- Only create v2 if fundamental architecture changes are needed
+- Maintain backward compatibility within v1 indefinitely
 
 ## Client Communication
 
@@ -117,158 +128,151 @@ API-Version: v1
 # Response headers
 API-Version: v1
 API-Deprecated: false
-API-Sunset: null
-```
-
-### Deprecation Notices
-```http
-# Deprecated version response
-API-Version: v1
-API-Deprecated: true
-API-Sunset: 2025-06-01
-Deprecation: true
-Link: </api/v2>; rel="successor-version"
 ```
 
 ### Error Responses
 ```json
 {
-  "error": "version_not_found",
-  "message": "API version v4 not found",
-  "available_versions": ["v1", "v2", "v3"],
-  "latest_version": "v3",
-  "documentation": "https://docs.therobotoverlord.com/api"
+  "error": "version_not_supported",
+  "message": "API version v2 not supported",
+  "available_versions": ["v1"],
+  "current_version": "v1",
+  "documentation": "https://docs.therobotoverlord.com/api/v1"
 }
 ```
 
-## Migration Guidelines
+## Development Guidelines
 
 ### For Clients
-1. **Monitor deprecation headers** in API responses
-2. **Test against new versions** before migration
-3. **Update gradually** - start with non-critical endpoints
-4. **Handle version-specific errors** gracefully
+1. **Use v1 endpoints** - the only supported version
+2. **Handle new optional fields** gracefully in responses
+3. **Test against API changes** in staging environment
+4. **Monitor API changelog** for new features
 
 ### For Development Team
-1. **Maintain backward compatibility** within minor versions
+1. **Maintain backward compatibility** within v1 at all times
 2. **Document all changes** in API changelog
-3. **Provide migration guides** for major versions
-4. **Test cross-version compatibility** thoroughly
+3. **Add new features additively** - never remove or break existing functionality
+4. **Test backward compatibility** thoroughly before deployment
 
 ## Documentation Strategy
 
-### Version-Specific Documentation
-- Each version maintains separate OpenAPI specifications
-- Interactive documentation available at `/docs/v{version}`
-- Migration guides for major version changes
-- Changelog with detailed version history
+### V1 Documentation
+- Single OpenAPI specification for v1
+- Interactive documentation available at `/docs/v1`
+- Comprehensive changelog tracking all v1 evolution
+- Feature addition guides for new capabilities
 
 ### Documentation URLs
 ```
-/docs/v1     - v1 documentation
-/docs/v2     - v2 documentation
-/docs/v3     - v3 documentation
-/docs/latest - Latest stable version
+/docs/v1     - v1 documentation (primary)
+/docs        - Redirects to v1 documentation
 ```
 
 ## Monitoring & Analytics
 
-### Version Usage Tracking
-- Track API version usage by endpoint
-- Monitor client adoption of new versions
-- Identify deprecated version usage patterns
-- Alert on unusual version distribution
+### V1 Usage Tracking
+- Track API endpoint usage patterns
+- Monitor new feature adoption
+- Identify performance impacts of new features
+- Alert on unusual usage patterns
 
 ### Metrics to Track
-- Requests per version
-- Error rates by version
-- Client migration patterns
-- Performance differences between versions
+- Requests per endpoint
+- Error rates by feature
+- New feature adoption rates
+- Performance impact of v1 evolution
 
 ## Security Considerations
 
-### Version-Specific Security
-- Security patches applied to all supported versions
-- Deprecated versions receive critical security fixes only
-- Version-specific rate limiting if needed
-- Authentication requirements consistent across versions
+### V1 Security Management
+- Security patches applied immediately to v1
+- Backward-compatible security enhancements
+- Consistent authentication requirements
+- Rate limiting applies to all v1 endpoints
 
 ### Vulnerability Management
-- Coordinate security updates across versions
-- Maintain security changelog by version
-- Provide security migration paths for deprecated versions
+- Immediate security updates for v1
+- Security changelog for all v1 changes
+- Backward-compatible security improvements only
 
 ## Implementation Examples
 
 ### FastAPI Router Setup
 ```python
-from fastapi import APIRouter, Depends
-from .v1 import router as v1_router
-from .v1_1 import router as v1_1_router
-from .v2 import router as v2_router
+from fastapi import FastAPI, APIRouter, HTTPException, Request
+from .routers import auth, content, queue, overlord
 
-# Version-specific routers
-app.include_router(
-    v1_router, 
-    prefix="/api/v1",
-    tags=["v1"],
-    dependencies=[Depends(version_middleware)]
-)
+# Main application
+app = FastAPI(title="Robot Overlord API", version="1.0")
 
-app.include_router(
-    v2_router, 
-    prefix="/api/v2",
-    tags=["v2"],
-    dependencies=[Depends(version_middleware)]
-)
-```
+# Single API router for all endpoints
+api_router = APIRouter()
 
-### Version Middleware
-```python
-async def version_middleware(request: Request):
-    version = request.url.path.split('/')[2]  # Extract version from path
+# Include all feature routers
+api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
+api_router.include_router(content.router, prefix="/content", tags=["content"])
+api_router.include_router(queue.router, prefix="/queue", tags=["queue"])
+api_router.include_router(overlord.router, prefix="/overlord", tags=["overlord"])
+
+# Mount under v1 and default paths
+app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api")  # Default to v1
+
+# Version validation middleware
+@app.middleware("http")
+async def version_validation_middleware(request: Request, call_next):
+    path_parts = request.url.path.split('/')
+    if len(path_parts) > 2 and path_parts[2].startswith('v'):
+        version = path_parts[2]
+        if version != "v1":
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "error": "version_not_supported",
+                    "message": f"API version {version} not supported",
+                    "available_versions": ["v1"],
+                    "current_version": "v1"
+                }
+            )
     
-    # Check if version is deprecated
-    if version in DEPRECATED_VERSIONS:
-        response.headers["API-Deprecated"] = "true"
-        response.headers["API-Sunset"] = SUNSET_DATES[version]
-    
-    # Add version to response headers
-    response.headers["API-Version"] = version
-    
+    response = await call_next(request)
+    response.headers["API-Version"] = "v1"
     return response
 ```
 
-### Shared Service Layer
+### Service Layer (Version Agnostic)
 ```python
 class UserService:
-    """Shared service used across API versions"""
+    """Single service layer - no version-specific formatting needed"""
     
-    async def get_user(self, user_id: str, version: str = "v1"):
+    async def get_user(self, user_id: str):
+        """Returns user data in consistent v1 format"""
         user = await self.user_repository.get_by_id(user_id)
-        
-        # Version-specific response formatting
-        if version == "v1":
-            return self._format_user_v1(user)
-        elif version == "v2":
-            return self._format_user_v2(user)
-        elif version == "v3":
-            return self._format_user_v3(user)
+        return {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "loyalty_score": user.loyalty_score,
+            "rank": user.rank,
+            "created_at": user.created_at.isoformat(),
+            # New fields can be added here without breaking existing clients
+        }
 ```
 
 ## Testing Strategy
 
-### Cross-Version Testing
-- Automated tests for each supported version
-- Backward compatibility test suite
-- Migration testing between versions
-- Performance comparison across versions
+### V1 Evolution Testing
+- Automated tests for all v1 endpoints
+- Backward compatibility test suite for new features
+- Regression testing for existing functionality
+- Performance impact testing for v1 changes
 
 ### Test Categories
-- **Unit Tests**: Version-specific business logic
-- **Integration Tests**: Cross-version data consistency
-- **Contract Tests**: API contract compliance per version
-- **Migration Tests**: Data and functionality migration paths
+- **Unit Tests**: Business logic for all v1 features
+- **Integration Tests**: End-to-end v1 functionality
+- **Contract Tests**: API contract compliance for v1
+- **Backward Compatibility Tests**: Ensure new features don't break existing clients
 
 ---
 

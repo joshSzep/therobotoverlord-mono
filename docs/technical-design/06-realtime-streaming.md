@@ -37,17 +37,21 @@ class StreamEvent(BaseModel):
 ### Queue Types
 
 1. **Global Topics Queue** (`global_topics`)
-   - Handles new topic creation approvals
-   - Single queue for all topic submissions
+   - Single queue for all topic creation requests
+   - Strict FIFO processing order globally
+   - One dedicated worker processes topics sequentially
    
-2. **Per-Topic Post Queues** (`topic_{topic_id}`)
-   - Separate queue for each topic's posts
-   - Prevents race conditions within topic discussions
-   - Allows parallel processing across different topics
+2. **Per-Topic Posts Queues** (`posts_topic_{topic_id}`)
+   - One queue per topic for posts and replies
+   - Strict FIFO processing within each topic
+   - Parallel processing across different topics
+   - Maintains chronological order within topic discussions
    
-3. **Per-User-Pair Message Queues** (`users_{user1_id}_{user2_id}`)
-   - Dedicated queue for private messages between specific user pairs
-   - User IDs sorted alphabetically for consistent naming
+3. **Per-Conversation Message Queues** (`messages_conv_{conversation_id}`)
+   - One queue per conversation for private messages
+   - Strict FIFO processing within each conversation
+   - Parallel processing across different conversations
+   - Ensures message delivery order within conversations
    - Maintains conversation context and ordering
 
 ## Queue Visualization (Hybrid Approach)

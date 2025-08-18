@@ -7,9 +7,10 @@ Seamless authentication experience with activity-based token refresh to prevent 
 ## Token Lifecycle Management
 
 ### Access Token Strategy
-- **Base Lifetime**: 15 minutes
-- **Activity Window**: 5 minutes before expiry
-- **Refresh Trigger**: Any user activity within the activity window
+- **Base Lifetime**: 1 hour
+- **Extension Amount**: +30 minutes per activity
+- **Maximum Lifetime**: 8 hours from initial issue
+- **Extension Triggers**: API calls, WebSocket activity, page navigation
 
 ### Background Refresh Implementation
 
@@ -17,35 +18,46 @@ Seamless authentication experience with activity-based token refresh to prevent 
 class TokenRefreshService:
     def __init__(self, redis_client):
         self.redis = redis_client
-        self.activity_window = 300  # 5 minutes in seconds
-        self.token_lifetime = 900   # 15 minutes in seconds
+        self.base_token_lifetime = 3600      # 1 hour in seconds
+        self.extension_amount = 1800         # 30 minutes in seconds
+        self.max_token_lifetime = 28800      # 8 hours in seconds
     
-    async def track_user_activity(self, user_id: str, session_id: str):
-        """Track user activity for token refresh decisions"""
-        activity_key = f"activity:{user_id}:{session_id}"
-        await self.redis.setex(activity_key, self.activity_window, int(time.time()))
+    async def extend_token_on_activity(self, token_payload: dict) -> dict:
+        """Extend token lifetime based on user activity"""
+        current_time = int(time.time())
+        token_iat = token_payload.get('iat')  # Initial issue time
+        token_exp = token_payload.get('exp')  # Current expiry
+        
+        # Calculate maximum allowed expiry (8 hours from initial issue)
+        max_expiry = token_iat + self.max_token_lifetime
+        
+        # Calculate new expiry (current time + 30 minutes)
+        new_expiry = current_time + self.extension_amount
+        
+        # Use the earlier of: new_expiry or max_expiry
+        final_expiry = min(new_expiry, max_expiry)
+        
+        # Only extend if we're actually extending the lifetime
+        if final_expiry > token_exp:
+            token_payload['exp'] = final_expiry
+            return token_payload
+        
+        return token_payload  # No extension needed/possible
     
-    async def should_refresh_token(self, token_payload: dict) -> bool:
-        """Determine if token should be refreshed based on activity"""
-        user_id = token_payload.get('sub')
-        session_id = token_payload.get('sid')
+    async def should_extend_token(self, token_payload: dict) -> bool:
+        """Check if token can be extended further"""
+        current_time = int(time.time())
+        token_iat = token_payload.get('iat')
         token_exp = token_payload.get('exp')
         
-        # Check if token is within refresh window
-        current_time = int(time.time())
-        time_until_expiry = token_exp - current_time
+        # Check if token hasn't reached maximum lifetime
+        max_expiry = token_iat + self.max_token_lifetime
         
-        if time_until_expiry > self.activity_window:
-            return False  # Too early to refresh
-        
-        # Check for recent activity
-        activity_key = f"activity:{user_id}:{session_id}"
-        recent_activity = await self.redis.get(activity_key)
-        
-        return recent_activity is not None
+        # Extend if token is still valid and hasn't reached max lifetime
+        return token_exp < max_expiry and token_exp > current_time
     
-    async def refresh_if_needed(self, request, response):
-        """Middleware to handle automatic token refresh"""
+    async def extend_token_if_needed(self, request, response):
+        """Middleware to handle automatic token extension on activity"""
         token = self.extract_access_token(request)
         if not token:
             return
@@ -53,15 +65,14 @@ class TokenRefreshService:
         try:
             payload = self.decode_token(token)
             
-            if await self.should_refresh_token(payload):
-                # Generate new access token
-                new_token = await self.generate_access_token(
-                    user_id=payload['sub'],
-                    session_id=payload['sid'],
-                    permissions=payload['permissions']
-                )
+            if await self.should_extend_token(payload):
+                # Extend token lifetime
+                extended_payload = await self.extend_token_on_activity(payload)
                 
-                # Set new cookie
+                # Generate new token with extended expiry
+                new_token = await self.generate_access_token_from_payload(extended_payload)
+                
+                # Set new cookie with extended expiry
                 self.set_access_token_cookie(response, new_token)
                 
         except TokenExpiredError:
