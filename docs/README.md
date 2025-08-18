@@ -33,12 +33,13 @@ Implementation specifications, architecture decisions, and system design.
 ### By Feature
 - **Authentication**: [Business](./business-requirements/05-auth-onboarding.md) | [Technical](./technical-design/03-authentication.md)
 - **Content Moderation**: [Business](./business-requirements/07-posts-moderation.md) | [Technical](./technical-design/07-ai-llm-integration.md)
-- **Queue System**: [Business](./business-requirements/16-queue-visualization.md) | [Technical](./technical-design/06-realtime-streaming.md)
+- **Queue System**: [Business](./business-requirements/16-queue-visualization.md) | [Technical](./technical-design/12-queue-management.md)
 - **User Roles**: [Business](./business-requirements/02-roles-capabilities.md) | [Technical](./technical-design/08-rbac-permissions.md)
 - **Loyalty System**: [Business](./business-requirements/10-gamification-reputation.md) | [Technical](./technical-design/09-loyalty-scoring.md)
+- **Overlord Behavior**: [Business](./business-requirements/09-overlord-behavior.md) | [Technical](./technical-design/07-ai-llm-integration.md)
 
 ### By Implementation Phase
-- **Phase 1 - Core Forum**: [Success & Delivery](./business-requirements/19-success-delivery.md)
+- **Phase 1 - Core Forum**: [Core Forum Implementation](./business-requirements/19-success-delivery.md)
 - **Phase 2 - Moderation**: [Posts & Moderation](./business-requirements/07-posts-moderation.md)
 - **Phase 3 - Reputation**: [Gamification & Reputation](./business-requirements/10-gamification-reputation.md)
 - **Phase 4 - Governance**: [Appeals & Reporting](./business-requirements/12-appeals-reporting.md)
