@@ -34,20 +34,20 @@ graph TD
     B -->|Fail| D[Reject: Poor Logic]
     
     C -->|Pass| E{Relevance Check}
-    C -->|Fail| F[Calibrate: Improve Tone]
+    C -->|Fail| F[Reject: Poor Tone]
     
     E -->|Pass| G[Approve Post]
-    E -->|Fail| H[Calibrate: Stay On Topic]
+    E -->|Fail| H[Reject: Off Topic]
     
     D --> I[Send to Graveyard]
-    F --> J[Return with Feedback]
-    H --> J
-    G --> K[Publish to Topic]
+    F --> I
+    H --> I
+    G --> J[Publish to Topic]
     
     style G fill:#4ecdc4,stroke:#fff,color:#fff
     style D fill:#ff6b6b,stroke:#fff,color:#fff
-    style F fill:#ffd93d,stroke:#000,color:#000
-    style H fill:#ffd93d,stroke:#000,color:#000
+    style F fill:#ff6b6b,stroke:#fff,color:#fff
+    style H fill:#ff6b6b,stroke:#fff,color:#fff
 ```
 
 ## Submission
