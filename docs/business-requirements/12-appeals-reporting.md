@@ -1,5 +1,63 @@
 # Appeals and Reporting
 
+## Appeals Process Flow
+
+```mermaid
+flowchart TD
+    A[Post Rejected] --> B[Citizen Sees Rejection]
+    B --> C{Want to Appeal?}
+    C -->|No| D[Accept Rejection]
+    C -->|Yes| E[Submit Appeal via Overlord Chat]
+    
+    E --> F[Rate Limit Check]
+    F -->|Pass| G[Appeal Enters Queue]
+    F -->|Fail| H[Show Rate Limit Message]
+    
+    G --> I[Human Moderator Review]
+    I --> J{Appeal Decision}
+    
+    J -->|Sustained| K[Post Becomes Visible]
+    J -->|Denied| L[Apply Sanction]
+    
+    K --> M[Update Loyalty Score +]
+    L --> N[Update Loyalty Score -]
+    
+    M --> O[Notify Citizen: Appeal Won]
+    N --> P[Notify Citizen: Appeal Lost]
+    
+    style I fill:#74b9ff,stroke:#fff,color:#fff
+    style K fill:#4ecdc4,stroke:#fff,color:#fff
+    style L fill:#ff6b6b,stroke:#fff,color:#fff
+```
+
+## Reporting & Flagging Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Citizen
+    participant F as Flag System
+    participant M as Moderator
+    participant O as Overlord
+    participant DB as Database
+    
+    C->>F: Flag Content
+    F->>DB: Store Flag Record
+    F->>M: Add to Review Queue
+    
+    M->>F: Review Flag
+    M->>M: Evaluate Content
+    
+    alt Flag Sustained
+        M->>DB: Hide Content
+        M->>O: Update Loyalty Score
+        M->>C: Notify: Flag Upheld
+    else Flag Dismissed
+        M->>DB: Keep Content Visible
+        M->>C: Notify: Flag Dismissed
+        Note over M: Check for frivolous flagging
+    end
+```
+
 ## Appeals
 
 ### Eligibility

@@ -1,5 +1,112 @@
 # API Design
 
+## API Architecture Overview
+
+```mermaid
+graph TD
+    subgraph "Client Layer"
+        A[Web Frontend]
+        B[Mobile App]
+        C[Admin Dashboard]
+    end
+    
+    subgraph "API Gateway"
+        D[FastAPI Router]
+        E[Authentication Middleware]
+        F[Rate Limiting]
+        G[CORS Handler]
+    end
+    
+    subgraph "Domain Routers"
+        H[/auth]
+        I[/users]
+        J[/topics]
+        K[/posts]
+        L[/moderation]
+        M[/queue]
+    end
+    
+    subgraph "Services"
+        N[Auth Service]
+        O[Content Service]
+        P[Moderation Service]
+        Q[Queue Service]
+        R[Notification Service]
+    end
+    
+    A --> D
+    B --> D
+    C --> D
+    
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    G --> I
+    G --> J
+    G --> K
+    G --> L
+    G --> M
+    
+    H --> N
+    I --> O
+    J --> O
+    K --> O
+    L --> P
+    M --> Q
+    
+    style D fill:#ff4757,stroke:#fff,color:#fff
+    style N fill:#74b9ff,stroke:#fff,color:#fff
+    style P fill:#4ecdc4,stroke:#fff,color:#fff
+```
+
+## Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API Gateway
+    participant G as Google OAuth
+    participant DB as Database
+    participant J as JWT Service
+    
+    C->>A: POST /api/v1/auth/login
+    A->>G: Redirect to Google
+    G->>A: OAuth callback with code
+    A->>G: Exchange code for tokens
+    G->>A: Return user info
+    A->>DB: Check/create user
+    DB->>A: User record
+    A->>J: Generate JWT tokens
+    J->>A: Access + Refresh tokens
+    A->>C: Set secure cookies
+    C->>A: Subsequent requests with cookies
+    A->>J: Validate access token
+    J->>A: Token valid + user info
+    A->>C: Authorized response
+```
+
+## Content Submission API Flow
+
+```mermaid
+flowchart TD
+    A[POST /api/v1/posts] --> B[Authentication Check]
+    B -->|Valid| C[Validate Content]
+    B -->|Invalid| D[401 Unauthorized]
+    
+    C -->|Valid| E[Create Post Record]
+    C -->|Invalid| F[400 Bad Request]
+    
+    E --> G[Add to Moderation Queue]
+    G --> H[Generate Queue Position]
+    H --> I[WebSocket Notification]
+    I --> J[Return 202 Accepted]
+    
+    style E fill:#74b9ff,stroke:#fff,color:#fff
+    style G fill:#ff4757,stroke:#fff,color:#fff
+    style I fill:#4ecdc4,stroke:#fff,color:#fff
+```
+
 ## Routing
 
 - **Modular routers by domain** (`auth`, `users`, `topics`, `posts`, `moderation`)

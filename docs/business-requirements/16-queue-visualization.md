@@ -4,6 +4,75 @@
 
 Clear, honest communication about queue position and estimated wait times through status cards and Overlord commentary. Replaces complex visualization with transparent, scalable status updates.
 
+## Queue System Architecture
+
+```mermaid
+graph TB
+    subgraph "Content Submission"
+        A[User Submits Content] --> B{Content Type?}
+        B -->|Topic| C[Topic Creation Queue]
+        B -->|Post| D[Post Moderation Queue]
+        B -->|Private Message| E[Private Message Queue]
+    end
+    
+    subgraph "Queue Processing"
+        C --> F[Topic Approval Bureau]
+        D --> G[Debate Moderation Office]
+        E --> H[Private Communication Review]
+    end
+    
+    subgraph "Overlord Processing"
+        F --> I[AI Evaluation Engine]
+        G --> I
+        H --> I
+        I --> J{Evaluation Result}
+        J -->|Approved| K[Content Published]
+        J -->|Rejected| L[Content to Graveyard]
+        J -->|Calibrated| M[Feedback to User]
+    end
+    
+    subgraph "Real-time Updates"
+        N[WebSocket Server] --> O[Queue Position Updates]
+        N --> P[Overlord Commentary]
+        N --> Q[Status Changes]
+    end
+    
+    style C fill:#ff4757,stroke:#fff,color:#fff
+    style D fill:#ff4757,stroke:#fff,color:#fff
+    style E fill:#ff4757,stroke:#fff,color:#fff
+    style I fill:#74b9ff,stroke:#fff,color:#fff
+```
+
+## Queue Flow Visualization
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant Q as Queue System
+    participant O as Overlord AI
+    participant W as WebSocket
+    participant DB as Database
+    
+    U->>Q: Submit Content
+    Q->>DB: Store in Queue Table
+    Q->>W: Send Position Update
+    W->>U: "Position #3 in queue"
+    
+    loop Queue Processing
+        Q->>O: Next Item for Review
+        O->>O: Evaluate Content
+        O->>Q: Return Decision
+        Q->>DB: Update Status
+        Q->>W: Send Progress Update
+        W->>U: "Under review..."
+    end
+    
+    O->>Q: Final Decision
+    Q->>DB: Update Content Status
+    Q->>W: Send Final Result
+    W->>U: "Approved/Rejected"
+```
+
 ## Queue Status Cards
 
 Each queue item displays:

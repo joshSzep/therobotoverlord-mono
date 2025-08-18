@@ -1,5 +1,140 @@
 # Database Schema
 
+## Database Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ TOPICS : creates
+    USERS ||--o{ POSTS : authors
+    USERS ||--o{ PRIVATE_MESSAGES : sends
+    USERS ||--o{ PRIVATE_MESSAGES : receives
+    USERS ||--o{ APPEALS : submits
+    USERS ||--o{ FLAGS : creates
+    USERS ||--o{ SANCTIONS : receives
+    USERS ||--o{ USER_BADGES : earns
+    USERS ||--o{ MODERATION_EVENTS : generates
+    
+    TOPICS ||--o{ POSTS : contains
+    TOPICS ||--o{ TOPIC_TAGS : has
+    TOPICS ||--o{ TOPIC_CREATION_QUEUE : queued_in
+    TOPICS ||--o{ FLAGS : flagged_as
+    
+    POSTS ||--o{ POSTS : replies_to
+    POSTS ||--o{ POST_MODERATION_QUEUE : queued_in
+    POSTS ||--o{ APPEALS : appealed_as
+    POSTS ||--o{ FLAGS : flagged_as
+    POSTS ||--o{ TRANSLATIONS : translated_as
+    
+    PRIVATE_MESSAGES ||--o{ PRIVATE_MESSAGE_QUEUE : queued_in
+    PRIVATE_MESSAGES ||--o{ TRANSLATIONS : translated_as
+    
+    TAGS ||--o{ TOPIC_TAGS : assigned_to
+    BADGES ||--o{ USER_BADGES : awarded_as
+    
+    USERS {
+        uuid id PK
+        varchar email UK
+        varchar google_id UK
+        varchar username
+        varchar role
+        integer loyalty_score
+        boolean is_banned
+        boolean is_sanctioned
+        timestamp created_at
+    }
+    
+    TOPICS {
+        uuid id PK
+        varchar title
+        text description
+        uuid author_id FK
+        boolean created_by_overlord
+        varchar status
+        timestamp approved_at
+        timestamp created_at
+    }
+    
+    POSTS {
+        uuid id PK
+        uuid topic_id FK
+        uuid parent_post_id FK
+        uuid author_id FK
+        text content
+        varchar status
+        text overlord_feedback
+        timestamp submitted_at
+        timestamp created_at
+    }
+    
+    PRIVATE_MESSAGES {
+        uuid id PK
+        uuid sender_id FK
+        uuid recipient_id FK
+        text content
+        varchar status
+        text overlord_feedback
+        timestamp sent_at
+    }
+```
+
+## Queue System Architecture
+
+```mermaid
+graph TD
+    subgraph "Queue Tables"
+        A[topic_creation_queue]
+        B[post_moderation_queue]
+        C[private_message_queue]
+    end
+    
+    subgraph "Content Tables"
+        D[topics]
+        E[posts]
+        F[private_messages]
+    end
+    
+    subgraph "Processing Logic"
+        G[Priority Score Calculation]
+        H[Position Assignment]
+        I[Worker Assignment]
+    end
+    
+    D --> A
+    E --> B
+    F --> C
+    
+    A --> G
+    B --> G
+    C --> G
+    
+    G --> H
+    H --> I
+    
+    style A fill:#ff4757,stroke:#fff,color:#fff
+    style B fill:#ff4757,stroke:#fff,color:#fff
+    style C fill:#ff4757,stroke:#fff,color:#fff
+```
+
+## Loyalty Scoring Event Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User Action
+    participant M as Moderation
+    participant E as Event Store
+    participant L as Loyalty Calculator
+    participant DB as User Record
+    
+    U->>M: Submit Content
+    M->>M: AI/Human Review
+    M->>E: Log Moderation Event
+    E->>L: Trigger Score Calculation
+    L->>L: Apply Algorithm
+    L->>DB: Update Loyalty Score
+    DB->>DB: Recalculate Rank
+    DB->>DB: Check Topic Creation Privilege
+```
+
 ## Database Configuration
 
 - **PostgreSQL 17** (Render managed)

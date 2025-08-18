@@ -1,8 +1,102 @@
-# Queue Management Logic
+# Queue Management System
 
-## Overview
+## Queue System Architecture
 
-Queue management system with strict FIFO ordering within contexts and parallel processing across contexts. The architecture uses:
+```mermaid
+graph TB
+    subgraph "Queue Input Layer"
+        A[Topic Submissions] --> D[Topic Creation Queue]
+        B[Post Submissions] --> E[Post Moderation Queue]
+        C[Message Submissions] --> F[Private Message Queue]
+    end
+    
+    subgraph "Queue Processing Engine"
+        D --> G[FIFO Priority Processor]
+        E --> H[Per-Topic FIFO Processor]
+        F --> I[Per-Conversation FIFO Processor]
+    end
+    
+    subgraph "Worker Assignment"
+        G --> J[Global Topic Worker Pool]
+        H --> K[Topic-Specific Worker Pool]
+        I --> L[Message Worker Pool]
+    end
+    
+    subgraph "AI Processing"
+        J --> M[Overlord AI Engine]
+        K --> M
+        L --> M
+        M --> N{Evaluation Result}
+        N -->|Approved| O[Publish Content]
+        N -->|Rejected| P[Send to Graveyard]
+        N -->|Calibrated| Q[Return Feedback]
+    end
+    
+    style D fill:#ff4757,stroke:#fff,color:#fff
+    style E fill:#ff4757,stroke:#fff,color:#fff
+    style F fill:#ff4757,stroke:#fff,color:#fff
+    style M fill:#74b9ff,stroke:#fff,color:#fff
+```
+
+## Queue Position Calculation
+
+```mermaid
+flowchart TD
+    A[New Submission] --> B[Calculate Priority Score]
+    B --> C[Priority Score = Timestamp + Priority Offset]
+    C --> D[Insert into Queue Table]
+    D --> E[Recalculate All Positions]
+    E --> F{Queue Type?}
+    
+    F -->|Topic| G[Global Position Calculation]
+    F -->|Post| H[Per-Topic Position Calculation]
+    F -->|Message| I[Per-Conversation Position Calculation]
+    
+    G --> J[UPDATE position_in_queue WHERE priority_score >= new_score]
+    H --> J
+    I --> J
+    
+    J --> K[WebSocket: Broadcast Position Updates]
+    K --> L[Update Estimated Completion Times]
+    
+    style C fill:#ffd93d,stroke:#000,color:#000
+    style K fill:#4ecdc4,stroke:#fff,color:#fff
+```
+
+## Real-time Queue Updates
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant Q as Queue Manager
+    participant W as WebSocket Server
+    participant AI as Overlord AI
+    participant DB as Database
+    
+    U->>Q: Submit Content
+    Q->>DB: Insert into Queue
+    Q->>Q: Calculate Position
+    Q->>W: Broadcast Position Update
+    W->>U: "Position #5 in queue"
+    
+    loop Processing Loop
+        Q->>AI: Process Next Item
+        AI->>AI: Evaluate Content
+        Q->>DB: Update Queue Status
+        Q->>W: Broadcast Progress
+        W->>U: "Under review..."
+    end
+    
+    AI->>Q: Return Decision
+    Q->>DB: Mark Complete
+    Q->>Q: Recalculate Positions
+    Q->>W: Broadcast Final Result
+    W->>U: "Approved/Rejected"
+```
+
+## Queue Types
+
+The Robot Overlord platform uses three specialized queues to handle different types of content moderation: parallel processing across contexts. The architecture uses:
 
 - **1 Global Topics Queue**: All topic creation requests (strict FIFO)
 - **N Posts Queues**: One queue per topic for posts/replies (strict FIFO within each topic)

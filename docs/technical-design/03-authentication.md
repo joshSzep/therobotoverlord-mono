@@ -1,5 +1,86 @@
 # Authentication
 
+## Authentication System Architecture
+
+```mermaid
+graph TD
+    subgraph "Client Layer"
+        A[Web Browser]
+        B[Mobile App]
+    end
+    
+    subgraph "Authentication Flow"
+        C[Google OAuth 2.0]
+        D[JWT Token Service]
+        E[Session Management]
+    end
+    
+    subgraph "Token Storage"
+        F[Access Token Cookie]
+        G[Refresh Token Cookie]
+        H[Session Database]
+    end
+    
+    subgraph "API Protection"
+        I[Authentication Middleware]
+        J[Role-Based Access Control]
+        K[Permission Validation]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    E --> G
+    E --> H
+    
+    F --> I
+    I --> J
+    J --> K
+    
+    style C fill:#ff4757,stroke:#fff,color:#fff
+    style D fill:#74b9ff,stroke:#fff,color:#fff
+    style I fill:#4ecdc4,stroke:#fff,color:#fff
+```
+
+## Token Lifecycle Management
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Client
+    participant A as Auth Service
+    participant G as Google OAuth
+    participant DB as Database
+    
+    U->>C: Login Request
+    C->>A: Initiate OAuth
+    A->>G: Redirect to Google
+    G->>U: Google Login
+    U->>G: Provide Credentials
+    G->>A: OAuth Callback + Code
+    A->>G: Exchange Code for Tokens
+    G->>A: User Info + Access Token
+    A->>DB: Store/Update User
+    A->>A: Generate JWT Tokens
+    A->>C: Set Secure Cookies
+    C->>U: Login Success
+    
+    loop Active Session
+        U->>C: API Request
+        C->>A: Validate Access Token
+        A->>A: Check Token Expiry
+        alt Token Valid
+            A->>A: Extend Token (if activity)
+            A->>C: Authorized Response
+        else Token Expired
+            A->>A: Use Refresh Token
+            A->>C: New Access Token
+        end
+    end
+```
+
 ## JWT-Based Authentication
 
 ### Token Lifetimes

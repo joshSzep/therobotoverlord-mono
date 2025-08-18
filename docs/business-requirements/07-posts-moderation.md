@@ -1,5 +1,58 @@
 # Posts and Replies
 
+## Post Moderation Flow
+
+```mermaid
+flowchart TD
+    A[Citizen Submits Post] --> B[Enter Post Moderation Queue]
+    B --> C[Queue Position Assigned]
+    C --> D[WebSocket: Position Update]
+    D --> E[Overlord AI Processing]
+    E --> F{Evaluation Result}
+    
+    F -->|Approved| G[Post Published]
+    F -->|Rejected| H[Post to Graveyard]
+    F -->|Calibrated| I[Return with Feedback]
+    
+    G --> J[Update Loyalty Score +]
+    H --> K[Update Loyalty Score -]
+    I --> L[User Can Edit & Resubmit]
+    
+    J --> M[Notify User: Approved]
+    K --> N[Notify User: Rejected]
+    L --> O[Notify User: Calibration]
+    
+    style E fill:#74b9ff,stroke:#fff,color:#fff
+    style G fill:#4ecdc4,stroke:#fff,color:#fff
+    style H fill:#ff6b6b,stroke:#fff,color:#fff
+    style I fill:#ffd93d,stroke:#000,color:#000
+```
+
+## Moderation Decision Tree
+
+```mermaid
+graph TD
+    A[Post Content] --> B{Logic Check}
+    B -->|Pass| C{Tone Check}
+    B -->|Fail| D[Reject: Poor Logic]
+    
+    C -->|Pass| E{Relevance Check}
+    C -->|Fail| F[Calibrate: Improve Tone]
+    
+    E -->|Pass| G[Approve Post]
+    E -->|Fail| H[Calibrate: Stay On Topic]
+    
+    D --> I[Send to Graveyard]
+    F --> J[Return with Feedback]
+    H --> J
+    G --> K[Publish to Topic]
+    
+    style G fill:#4ecdc4,stroke:#fff,color:#fff
+    style D fill:#ff6b6b,stroke:#fff,color:#fff
+    style F fill:#ffd93d,stroke:#000,color:#000
+    style H fill:#ffd93d,stroke:#000,color:#000
+```
+
 ## Submission
 
 - Citizens can reply in any topic.

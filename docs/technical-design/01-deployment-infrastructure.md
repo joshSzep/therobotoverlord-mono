@@ -1,5 +1,76 @@
 # Deployment and Infrastructure
 
+## Infrastructure Architecture
+
+```mermaid
+graph TB
+    subgraph "External Services"
+        A[Google OAuth]
+        B[Domain DNS]
+    end
+    
+    subgraph "Render.com Infrastructure"
+        C[Load Balancer]
+        D[Web Service - Next.js]
+        E[API Service - FastAPI]
+        F[Worker Service - Arq]
+        G[PostgreSQL 17]
+        H[Redis 8]
+    end
+    
+    subgraph "Environments"
+        I[Production - main branch]
+        J[Staging - staging branch]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    C --> E
+    E --> F
+    E --> G
+    E --> H
+    F --> G
+    F --> H
+    
+    I --> D
+    I --> E
+    I --> F
+    J --> D
+    J --> E
+    J --> F
+    
+    style C fill:#ff4757,stroke:#fff,color:#fff
+    style G fill:#74b9ff,stroke:#fff,color:#fff
+    style H fill:#4ecdc4,stroke:#fff,color:#fff
+```
+
+## Deployment Pipeline
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant GA as GitHub Actions
+    participant R as Render
+    participant DB as Database
+    
+    Dev->>GH: Push to staging branch
+    GH->>GA: Trigger CI/CD
+    GA->>GA: Run tests
+    GA->>R: Deploy to staging
+    R->>DB: Run migrations (if any)
+    R->>R: Start staging services
+    
+    Dev->>GH: Merge to main branch
+    GH->>GA: Trigger production CI/CD
+    GA->>GA: Run full test suite
+    GA->>R: Deploy to production
+    R->>DB: Run production migrations
+    R->>R: Start production services
+    R->>R: Health check validation
+```
+
 ## Hosting Provider
 
 **Render.com**
