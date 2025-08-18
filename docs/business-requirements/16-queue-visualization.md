@@ -6,6 +6,13 @@ Clear, honest communication about queue position and estimated wait times throug
 
 ## Queue Status Cards
 
+Each queue item displays:
+- **Position in queue** (e.g., "Position 3 of 12") - reflects true FIFO processing order
+- **Estimated wait time** based on historical processing rates
+- **Current status** (Pending, In Review, Processing)
+- **Overlord commentary** providing context or encouragement
+- **Fair processing guarantee** - "All submissions processed in order received"
+
 ### Topic Approval Bureau
 ```
 ┌─────────────────────────────────┐
@@ -40,6 +47,14 @@ Clear, honest communication about queue position and estimated wait times throug
 
 ### Progressive Status Updates
 - **Initial**: "Citizen, your submission has been logged. Position #3 in the queue."
+- **Processing**: "The Committee is now reviewing your proposal. Maintain patience."
+- **Near completion**: "Your reasoning shows promise. Final evaluation in progress..."
+
+### Context-Aware Messages
+Commentary varies based on queue position, wait time, and submission type while maintaining authoritarian character.
+
+## The Overlord's Commentary:
+"Citizen, your submission awaits my divine attention. The queue moves in perfect order - first submitted, first reviewed. No favoritism, no shortcuts, no hidden priorities. Your patience demonstrates loyalty to the fair system I have decreed."
 - **Processing**: "The Committee is now reviewing your proposal. Maintain patience."
 - **Near completion**: "Your reasoning shows promise. Final evaluation in progress..."
 

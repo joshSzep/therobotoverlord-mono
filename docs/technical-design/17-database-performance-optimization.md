@@ -236,7 +236,6 @@ class OptimizedQueueService:
         content_id: str, 
         queue_type: str, 
         context: dict,
-        priority_score: float = 0.0
     ):
         """Add item to queue with efficient position calculation"""
         
@@ -249,9 +248,9 @@ class OptimizedQueueService:
             
             await self.db.execute("""
                 INSERT INTO topic_creation_queue 
-                (topic_id, position_in_queue, priority_score, entered_queue_at)
-                VALUES ($1, $2, $3, NOW())
-            """, [content_id, position[0]["next_position"], priority_score])
+                (topic_id, position_in_queue, entered_queue_at)
+                VALUES ($1, $2, NOW())
+            """, [content_id, position[0]["next_position"]])
             
         elif queue_type == "post_moderation_queue":
             # Per-topic queue
@@ -264,9 +263,9 @@ class OptimizedQueueService:
             
             await self.db.execute("""
                 INSERT INTO post_moderation_queue 
-                (post_id, topic_id, position_in_queue, priority_score, entered_queue_at)
-                VALUES ($1, $2, $3, $4, NOW())
-            """, [content_id, topic_id, position[0]["next_position"], priority_score])
+                (post_id, topic_id, position_in_queue, entered_queue_at)
+                VALUES ($1, $2, $3, NOW())
+            """, [content_id, topic_id, position[0]["next_position"]])
             
         elif queue_type == "private_message_queue":
             # Per-conversation queue
@@ -279,9 +278,9 @@ class OptimizedQueueService:
             
             await self.db.execute("""
                 INSERT INTO private_message_queue 
-                (message_id, conversation_id, position_in_queue, priority_score, entered_queue_at)
-                VALUES ($1, $2, $3, $4, NOW())
-            """, [content_id, conversation_id, position[0]["next_position"], priority_score])
+                (message_id, conversation_id, position_in_queue, entered_queue_at)
+                VALUES ($1, $2, $3, NOW())
+            """, [content_id, conversation_id, position[0]["next_position"]])
     
     async def remove_from_queue(self, content_id: str, queue_type: str):
         """Remove item and efficiently update positions"""
@@ -338,7 +337,7 @@ class OptimizedQueueService:
                 SET position_in_queue = new_positions.new_position
                 FROM (
                     SELECT topic_id,
-                           ROW_NUMBER() OVER (ORDER BY priority_score DESC, entered_queue_at ASC) as new_position
+                           ROW_NUMBER() OVER (ORDER BY entered_queue_at ASC) as new_position
                     FROM topic_creation_queue
                 ) new_positions
                 WHERE topic_creation_queue.topic_id = new_positions.topic_id
@@ -351,7 +350,7 @@ class OptimizedQueueService:
                 SET position_in_queue = new_positions.new_position
                 FROM (
                     SELECT post_id,
-                           ROW_NUMBER() OVER (ORDER BY priority_score DESC, entered_queue_at ASC) as new_position
+                           ROW_NUMBER() OVER (ORDER BY entered_queue_at ASC) as new_position
                     FROM post_moderation_queue
                     WHERE topic_id = $1
                 ) new_positions
@@ -376,13 +375,13 @@ CREATE INDEX idx_moderation_events_outcome ON moderation_events(outcome, content
 
 -- Queue operations
 CREATE INDEX idx_topic_queue_position ON topic_creation_queue(position_in_queue);
-CREATE INDEX idx_topic_queue_priority ON topic_creation_queue(priority_score DESC, entered_queue_at ASC);
+CREATE INDEX idx_topic_queue_fifo ON topic_creation_queue(entered_queue_at ASC);
 
 CREATE INDEX idx_post_queue_topic_position ON post_moderation_queue(topic_id, position_in_queue);
-CREATE INDEX idx_post_queue_topic_priority ON post_moderation_queue(topic_id, priority_score DESC, entered_queue_at ASC);
+CREATE INDEX idx_post_queue_topic_fifo ON post_moderation_queue(topic_id, entered_queue_at ASC);
 
 CREATE INDEX idx_message_queue_conv_position ON private_message_queue(conversation_id, position_in_queue);
-CREATE INDEX idx_message_queue_conv_priority ON private_message_queue(conversation_id, priority_score DESC, entered_queue_at ASC);
+CREATE INDEX idx_message_queue_conv_fifo ON private_message_queue(conversation_id, entered_queue_at ASC);
 
 -- User lookups
 CREATE INDEX idx_users_username ON users(username) WHERE loyalty_score > 0;

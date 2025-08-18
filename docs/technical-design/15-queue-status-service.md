@@ -98,7 +98,7 @@ class QueueStatusService:
             # Global topic queue - all topics compete
             await self.db.execute_query(f"""
                 WITH ranked_queue AS (
-                    SELECT id, ROW_NUMBER() OVER (ORDER BY priority_score) as new_position
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY entered_queue_at ASC) as new_position
                     FROM {queue_table}
                     WHERE status = 'pending'
                 )
@@ -111,7 +111,7 @@ class QueueStatusService:
             # Per-topic queues - posts only compete within their topic
             await self.db.execute_query(f"""
                 WITH ranked_queue AS (
-                    SELECT id, ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY priority_score) as new_position
+                    SELECT id, ROW_NUMBER() OVER (PARTITION BY topic_id ORDER BY entered_queue_at ASC) as new_position
                     FROM {queue_table}
                     WHERE status = 'pending'
                 )
@@ -127,7 +127,7 @@ class QueueStatusService:
                     SELECT id, 
                            ROW_NUMBER() OVER (
                                PARTITION BY CONCAT('users_', LEAST(sender_id::text, recipient_id::text), '_', GREATEST(sender_id::text, recipient_id::text))
-                               ORDER BY priority_score
+                               ORDER BY entered_queue_at ASC
                            ) as new_position
                     FROM {queue_table}
                     WHERE status = 'pending'

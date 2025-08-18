@@ -250,7 +250,7 @@ class QueueItem:
     worker_id: Optional[str]
 
 class QueueRepository:
-    async def add_to_topic_queue(self, topic_id: str, priority_score: int = 0) -> QueueItem:
+    async def add_to_topic_queue(self, topic_id: str) -> QueueItem:
         """Add topic to creation queue"""
         query = """
             WITH next_position AS (
@@ -258,17 +258,17 @@ class QueueRepository:
                 FROM topic_creation_queue
             )
             INSERT INTO topic_creation_queue 
-            (topic_id, position_in_queue, priority_score, entered_queue_at)
-            SELECT $1, pos, $2, NOW()
+            (topic_id, position_in_queue, entered_queue_at)
+            SELECT $1, pos, NOW()
             FROM next_position
             RETURNING *
         """
-        row = await db_pool.execute_one(query, topic_id, priority_score)
+        row = await db_pool.execute_one(query, topic_id)
         return QueueItem(
             id=row['id'],
             content_id=row['topic_id'],
-            priority_score=row['priority_score'],
-            priority=row['priority'],
+            priority_score=0,  # No priority system - strict FIFO
+            priority=0,
             position_in_queue=row['position_in_queue'],
             status=row['status'],
             entered_queue_at=row['entered_queue_at'],
@@ -277,7 +277,7 @@ class QueueRepository:
             worker_id=row['worker_id']
         )
     
-    async def add_to_private_message_queue(self, message_id: str, sender_id: str, recipient_id: str, priority_score: int = 0) -> QueueItem:
+    async def add_to_private_message_queue(self, message_id: str, sender_id: str, recipient_id: str) -> QueueItem:
         """Add private message to moderation queue for specific conversation"""
         # Calculate conversation_id for consistent queue naming
         user_ids = sorted([sender_id, recipient_id])
@@ -290,17 +290,17 @@ class QueueRepository:
                 WHERE conversation_id = $2
             )
             INSERT INTO private_message_queue 
-            (message_id, sender_id, recipient_id, conversation_id, position_in_queue, priority_score, entered_queue_at)
-            SELECT $1, $3, $4, $2, pos, $5, NOW()
+            (message_id, sender_id, recipient_id, conversation_id, position_in_queue, entered_queue_at)
+            SELECT $1, $3, $4, $2, pos, NOW()
             FROM next_position
             RETURNING *
         """
-        row = await db_pool.execute_one(query, message_id, conversation_id, sender_id, recipient_id, priority_score)
+        row = await db_pool.execute_one(query, message_id, conversation_id, sender_id, recipient_id)
         return QueueItem(
             id=row['id'],
             content_id=row['message_id'],
-            priority_score=row['priority_score'],
-            priority=row['priority'],
+            priority_score=0,  # No priority system - strict FIFO
+            priority=0,
             position_in_queue=row['position_in_queue'],
             status=row['status'],
             entered_queue_at=row['entered_queue_at'],
@@ -315,7 +315,7 @@ class QueueRepository:
             query = """
                 SELECT * FROM topic_creation_queue
                 WHERE status = 'pending'
-                ORDER BY priority_score DESC, entered_queue_at ASC
+                ORDER BY entered_queue_at ASC
                 LIMIT 1
             """
             row = await db_pool.execute_one(query)
@@ -323,7 +323,7 @@ class QueueRepository:
             query = """
                 SELECT * FROM post_moderation_queue
                 WHERE topic_id = $1 AND status = 'pending'
-                ORDER BY priority_score DESC, entered_queue_at ASC
+                ORDER BY entered_queue_at ASC
                 LIMIT 1
             """
             row = await db_pool.execute_one(query, context["topic_id"])
@@ -331,7 +331,7 @@ class QueueRepository:
             query = """
                 SELECT * FROM private_message_queue
                 WHERE conversation_id = $1 AND status = 'pending'
-                ORDER BY priority_score DESC, entered_queue_at ASC
+                ORDER BY entered_queue_at ASC
                 LIMIT 1
             """
             row = await db_pool.execute_one(query, context["conversation_id"])
@@ -344,8 +344,8 @@ class QueueRepository:
         return QueueItem(
             id=row['id'],
             content_id=row.get('topic_id') or row.get('post_id') or row.get('message_id'),
-            priority_score=row['priority_score'],
-            priority=row['priority'],
+            priority_score=0,  # No priority system - strict FIFO
+            priority=0,
             position_in_queue=row['position_in_queue'],
             status=row['status'],
             entered_queue_at=row['entered_queue_at'],

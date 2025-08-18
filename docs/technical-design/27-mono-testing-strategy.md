@@ -235,8 +235,9 @@ test.describe('Loyalty System Integration', () => {
       await expect(page.locator('[data-testid="user-rank"]')).toContainText('Loyal Worker');
     }
 
-    // Test privilege unlock
-    if (updatedScore.loyaltyScore >= 150) {
+    // Test privilege unlock - check if user is in top 10%
+    const isTopTenPercent = await apiHelper.isInTopPercentile(citizen.id, 0.1);
+    if (isTopTenPercent) {
       await page.goto('/topics');
       await expect(page.locator('[data-testid="create-topic-button"]')).toBeVisible();
     }
@@ -270,7 +271,8 @@ test.describe('Overlord Chat Integration', () => {
     await page.click('[data-testid="send-message"]');
 
     const response = await page.locator('[data-testid="overlord-response"]').last();
-    if (citizen.loyaltyScore >= 150) {
+    const isTopTenPercent = await apiHelper.isInTopPercentile(citizen.id, 0.1);
+    if (isTopTenPercent) {
       await expect(response).toContainText('You may create topics');
       await expect(page.locator('[data-testid="create-topic-link"]')).toBeVisible();
     } else {
@@ -512,6 +514,14 @@ export class TestEnvironment {
   private async cleanupTestData(): Promise<void> {
     await this.apiHelper.clearTestData();
   }
+
+  // Add helper method for top percentile checking
+  async isInTopPercentile(userId: string, percentile: number): Promise<boolean> {
+    const totalUsers = await this.apiHelper.getTotalActiveUsers();
+    const userRank = await this.apiHelper.getUserRank(userId);
+    const threshold = Math.ceil(totalUsers * percentile);
+    return userRank <= threshold;
+  }
 }
 
 export class TestDataFactory {
@@ -614,13 +624,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       
       - name: Install dependencies
         run: |
