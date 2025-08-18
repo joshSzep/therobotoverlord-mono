@@ -13,7 +13,7 @@ Registered users who participate in debates.
 Browsers who can read the site. They can attempt to post, but must authenticate before anything enters moderation.
 
 ### Overlord
-The in-world AI persona that moderates, calibrates, praises, or sanctions. The only judge of content quality.
+The in-world AI persona that moderates, praises, or sanctions. The only judge of content quality.
 
 ### Topics
 Debate threads. Some are created by the Overlord. Some are created by high-rank citizens. All topics require Overlord approval before going live.

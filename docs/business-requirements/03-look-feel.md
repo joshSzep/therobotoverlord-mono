@@ -12,7 +12,7 @@
 
 - **Authentication**: "Citizen identification required."
 - **Success**: "Your reasoning is efficient. Approved by the Central Committee."
-- **Warning**: "Citizen, your logic requires calibration."
+- **Warning**: "Citizen, your logic requires improvement."
 - **Error**: "Invalid claim detected. The Committee has logged this attempt."
 
 ## Distinct Overlord Styling

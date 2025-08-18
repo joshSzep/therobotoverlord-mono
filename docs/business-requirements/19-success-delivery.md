@@ -15,7 +15,7 @@ gantt
     section Phase 2 - Moderation
     Full Overlord Evaluation      :p2-eval, after p1-registry, 3w
     Queue Visualization           :p2-queue, after p2-eval, 2w
-    Calibrations & Rejections     :p2-feedback, after p2-queue, 2w
+    Rejections & Appeals          :p2-feedback, after p2-queue, 2w
     
     section Phase 3 - Reputation
     Loyalty Score System          :p3-loyalty, after p2-feedback, 2w
@@ -35,7 +35,7 @@ graph TD
     subgraph "Content Quality Metrics"
         A[Approval Rate %]
         B[Appeal Success Rate %]
-        C[Calibration Improvement Rate %]
+        C[Content Quality Score]
     end
     
     subgraph "User Engagement Metrics"
@@ -85,7 +85,7 @@ graph TD
 Authentication and onboarding. Topics with Overlord approvals. Posts and replies. Chronological ordering. Minimal Overlord commentary. Registry and leaderboard scaffolding.
 
 ### Phase 2. Moderation
-Full Overlord evaluation across specialized queue types. Real-time multi-queue visualization with dynamic tube network. Calibrations and rejections with feedback.
+Full Overlord evaluation across specialized queue types. Real-time multi-queue visualization with dynamic tube network. Rejections with feedback and appeals process.
 
 ### Phase 3. Reputation
 Loyalty Score, global leaderboard, badges, profiles with activity list and tag cloud. Anti-spam sanctions.
