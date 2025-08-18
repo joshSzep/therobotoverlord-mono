@@ -4,7 +4,7 @@
 
 ### JWT Security
 - **Asymmetric Keys**: RS256/ES256 for token signing
-- **Short Access Token Lifetime**: 5 minutes to minimize exposure
+- **Activity-Based Token Lifetime**: 1 hour base, extendable to 8 hours maximum
 - **Refresh Token Rotation**: Prevents token reuse attacks
 - **Reuse Detection**: Automatic session revocation on token reuse
 
@@ -19,8 +19,9 @@
 ### Privacy Controls
 - **Private Message Audit**: Limited to admins and super admins
 - **Graveyard Privacy**: Rejected posts visible only to author and moderators+
-- **Account Deletion**: Automated export and deletion process
-- **Data Retention**: Indefinite retention with clear ToS disclosure
+- **Account Deletion**: Automated export and anonymization process
+- **Data Retention**: GDPR-compliant tiered retention with anonymization
+- **Content Anonymization**: Personal identifiers removed while preserving thread history
 
 ### Encryption
 - **In Transit**: TLS 1.3 for all communications
@@ -62,11 +63,15 @@ class PostSubmission(BaseModel):
 - **Data Access**: Private message audits tracked
 - **System Events**: Configuration changes, role modifications
 
-### Compliance Features
-- **Data Export**: Automated user data export for GDPR compliance
+### GDPR Compliance Features
+- **Data Export**: Automated user data export (JSON/CSV formats)
+- **Right to Erasure**: Account deletion with content anonymization
+- **Data Minimization**: Limited retention periods for personal data
+- **Lawful Basis**: Clear legal bases for all data processing
+- **User Rights**: Access, rectification, portability, and objection mechanisms
 - **Audit Trails**: Immutable logs for all sensitive operations
 - **Content Moderation**: AI-first approach with human oversight
-- **Terms Enforcement**: Clear ToS with automated enforcement
+- **Anonymization**: Preserve thread history while removing personal identifiers
 
 ---
 
