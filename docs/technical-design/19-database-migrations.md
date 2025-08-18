@@ -576,116 +576,122 @@ step(
 ```python
 # migrations/cli.py
 import asyncio
-import click
 import os
+from typing import Optional
+import typer
 from migration_runner import MigrationRunner
 
-@click.group()
-@click.option('--database-url', envvar='DATABASE_URL', required=True)
-@click.pass_context
-def cli(ctx, database_url):
-    """Database migration CLI"""
-    ctx.ensure_object(dict)
-    ctx.obj['runner'] = MigrationRunner(database_url)
+app = typer.Typer(help="Database migration CLI")
 
-@cli.command()
-@click.option('--target', type=int, help='Target migration version')
-@click.option('--dry-run', is_flag=True, help='Show what would be applied without executing')
-@click.pass_context
-def migrate(ctx, target, dry_run):
+def get_runner() -> MigrationRunner:
+    """Get migration runner instance"""
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        typer.echo("Error: DATABASE_URL environment variable is required", err=True)
+        raise typer.Exit(1)
+    return MigrationRunner(database_url)
+
+@app.command()
+def migrate(
+    target: Optional[int] = typer.Option(None, help="Target migration version"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be applied without executing")
+):
     """Apply pending migrations"""
     async def run():
-        results = await ctx.obj['runner'].migrate(target, dry_run)
+        runner = get_runner()
+        results = await runner.migrate(target, dry_run)
         
         if results['applied']:
-            click.echo(f"Applied {len(results['applied'])} migrations:")
+            typer.echo(f"Applied {len(results['applied'])} migrations:")
             for migration in results['applied']:
                 status = " (DRY RUN)" if migration.get('dry_run') else ""
-                click.echo(f"  ✓ {migration['version']}: {migration['name']}{status}")
+                typer.echo(f"  ✓ {migration['version']}: {migration['name']}{status}")
         
         if results['skipped']:
-            click.echo(f"Skipped {len(results['skipped'])} migrations:")
+            typer.echo(f"Skipped {len(results['skipped'])} migrations:")
             for migration in results['skipped']:
-                click.echo(f"  - {migration['version']}: {migration['name']} ({migration['reason']})")
+                typer.echo(f"  - {migration['version']}: {migration['name']} ({migration['reason']})")
         
         if results['errors']:
-            click.echo(f"Failed {len(results['errors'])} migrations:", err=True)
+            typer.echo(f"Failed {len(results['errors'])} migrations:", err=True)
             for migration in results['errors']:
-                click.echo(f"  ✗ {migration['version']}: {migration['name']} - {migration['error']}", err=True)
+                typer.echo(f"  ✗ {migration['version']}: {migration['name']} - {migration['error']}", err=True)
     
     asyncio.run(run())
 
-@cli.command()
-@click.argument('target_version', type=int)
-@click.option('--dry-run', is_flag=True, help='Show what would be rolled back without executing')
-@click.pass_context
-def rollback(ctx, target_version, dry_run):
+@app.command()
+def rollback(
+    target_version: int = typer.Argument(..., help="Target version to rollback to"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be rolled back without executing")
+):
     """Rollback migrations to target version"""
     async def run():
-        results = await ctx.obj['runner'].rollback(target_version, dry_run)
+        runner = get_runner()
+        results = await runner.rollback(target_version, dry_run)
         
         if results['rolled_back']:
-            click.echo(f"Rolled back {len(results['rolled_back'])} migrations:")
+            typer.echo(f"Rolled back {len(results['rolled_back'])} migrations:")
             for migration in results['rolled_back']:
                 status = " (DRY RUN)" if migration.get('dry_run') else ""
-                click.echo(f"  ✓ {migration['version']}: {migration['name']}{status}")
+                typer.echo(f"  ✓ {migration['version']}: {migration['name']}{status}")
         
         if results['errors']:
-            click.echo(f"Failed to rollback {len(results['errors'])} migrations:", err=True)
+            typer.echo(f"Failed to rollback {len(results['errors'])} migrations:", err=True)
             for migration in results['errors']:
-                click.echo(f"  ✗ {migration['version']}: {migration['name']} - {migration['error']}", err=True)
+                typer.echo(f"  ✗ {migration['version']}: {migration['name']} - {migration['error']}", err=True)
     
     asyncio.run(run())
 
-@cli.command()
-@click.pass_context
-def status(ctx):
+@app.command()
+def status():
     """Show migration status"""
     async def run():
-        status = await ctx.obj['runner'].status()
+        runner = get_runner()
+        status_info = await runner.status()
         
-        click.echo(f"Current version: {status['current_version']}")
-        click.echo(f"Latest version: {status['latest_version']}")
-        click.echo(f"Pending migrations: {status['pending_count']}")
+        typer.echo(f"Current version: {status_info['current_version']}")
+        typer.echo(f"Latest version: {status_info['latest_version']}")
+        typer.echo(f"Pending migrations: {status_info['pending_count']}")
         
-        if status['pending_migrations']:
-            click.echo("\nPending:")
-            for migration in status['pending_migrations']:
-                click.echo(f"  {migration['version']}: {migration['name']}")
+        if status_info['pending_migrations']:
+            typer.echo("\nPending:")
+            for migration in status_info['pending_migrations']:
+                typer.echo(f"  {migration['version']}: {migration['name']}")
         
-        if status['applied_migrations']:
-            click.echo(f"\nApplied ({len(status['applied_migrations'])}):")
-            for migration in status['applied_migrations'][-5:]:  # Show last 5
-                click.echo(f"  {migration['version']}: {migration['name']} ({migration['execution_time_ms']}ms)")
+        if status_info['applied_migrations']:
+            typer.echo(f"\nApplied ({len(status_info['applied_migrations'])}):")
+            for migration in status_info['applied_migrations'][-5:]:  # Show last 5
+                typer.echo(f"  {migration['version']}: {migration['name']} ({migration['execution_time_ms']}ms)")
     
     asyncio.run(run())
 
-@cli.command()
-@click.option('--environment', default='development', help='Environment to seed')
-@click.pass_context
-def seed(ctx, environment):
+@app.command()
+def seed(
+    environment: str = typer.Option("development", help="Environment to seed")
+):
     """Run seed data"""
     async def run():
-        results = await ctx.obj['runner'].seed(environment)
+        runner = get_runner()
+        results = await runner.seed(environment)
         
         if 'error' in results:
-            click.echo(f"Error: {results['error']}", err=True)
+            typer.echo(f"Error: {results['error']}", err=True)
             return
         
         if results['executed']:
-            click.echo(f"Executed {len(results['executed'])} seed files:")
+            typer.echo(f"Executed {len(results['executed'])} seed files:")
             for file_name in results['executed']:
-                click.echo(f"  ✓ {file_name}")
+                typer.echo(f"  ✓ {file_name}")
         
         if results['errors']:
-            click.echo(f"Failed {len(results['errors'])} seed files:", err=True)
+            typer.echo(f"Failed {len(results['errors'])} seed files:", err=True)
             for error in results['errors']:
-                click.echo(f"  ✗ {error['file']} - {error['error']}", err=True)
+                typer.echo(f"  ✗ {error['file']} - {error['error']}", err=True)
     
     asyncio.run(run())
 
 if __name__ == '__main__':
-    cli()
+    app()
 ```
 
 ## Example Migration Files
