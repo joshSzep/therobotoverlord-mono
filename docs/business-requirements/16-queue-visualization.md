@@ -28,7 +28,6 @@ graph TB
         I --> J{Evaluation Result}
         J -->|Approved| K[Content Published]
         J -->|Rejected| L[Content to Graveyard]
-        J -->|Calibrated| M[Feedback to User]
     end
     
     subgraph "Real-time Updates"

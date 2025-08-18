@@ -12,15 +12,12 @@ flowchart TD
     
     F -->|Approved| G[Post Published]
     F -->|Rejected| H[Post to Graveyard]
-    F -->|Calibrated| I[Return with Feedback]
     
-    G --> J[Update Loyalty Score +]
-    H --> K[Update Loyalty Score -]
-    I --> L[User Can Edit & Resubmit]
+    G --> I[Update Loyalty Score +]
+    H --> J[Update Loyalty Score -]
     
-    J --> M[Notify User: Approved]
-    K --> N[Notify User: Rejected]
-    L --> O[Notify User: Calibration]
+    I --> K[Notify User: Approved]
+    J --> L[Notify User: Rejected]
     
     style E fill:#74b9ff,stroke:#fff,color:#fff
     style G fill:#4ecdc4,stroke:#fff,color:#fff
@@ -83,9 +80,6 @@ While content is waiting, the Overlord can stream in-character commentary to the
 
 ### Approved
 The post appears in the topic. The Overlord may attach a visible commentary block.
-
-### Calibrated
-The Overlord returns specific feedback in-character. The user may edit and resubmit.
 
 ### Rejected
 The post does not appear publicly. It is stored in the author's private **Graveyard** and visible to the author, moderators, admins, and super admins.

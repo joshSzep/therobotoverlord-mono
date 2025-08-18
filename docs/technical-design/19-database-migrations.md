@@ -350,7 +350,7 @@ step(
         event_type VARCHAR(50) NOT NULL,
         content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('topic', 'post', 'private_message')),
         content_id UUID NOT NULL,
-        outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected', 'calibrated')),
+        outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected')),
         moderator_id UUID REFERENCES users(id),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
@@ -743,7 +743,7 @@ CREATE TABLE posts (
     parent_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'calibrated', 'rejected')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
     overlord_feedback TEXT,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

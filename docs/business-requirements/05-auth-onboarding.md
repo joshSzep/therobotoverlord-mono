@@ -69,7 +69,7 @@ If an anonymous visitor attempts to submit a post or create a topic, they are gu
 The Overlord explains:
 - That all content is judged for logic and tone.
 - That tags are assigned by the Overlord.
-- That posts can be approved, calibrated, or rejected.
+- That posts can be approved or rejected.
 - That rejected posts can be appealed under limits.
 
 ---

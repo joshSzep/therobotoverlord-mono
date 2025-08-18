@@ -188,7 +188,7 @@ CREATE TABLE posts (
     parent_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL, -- Canonical English storage only
-    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'calibrated', 'rejected')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
     overlord_feedback TEXT,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Used for chronological display ordering
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -412,7 +412,7 @@ CREATE TABLE moderation_events (
     event_type VARCHAR(50) NOT NULL, -- 'topic_moderated', 'post_moderated', 'private_message_moderated', etc.
     content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('topic', 'post', 'private_message')),
     content_id UUID NOT NULL, -- references posts.id, topics.id, or private_messages.id
-    outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected', 'calibrated')), -- moderation result
+    outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('approved', 'rejected')), -- moderation result
     moderator_id UUID REFERENCES users(id), -- NULL for AI moderation
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

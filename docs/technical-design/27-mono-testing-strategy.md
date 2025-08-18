@@ -157,10 +157,10 @@ test.describe('Complete Content Moderation Flow', () => {
     const submittedContent = await apiHelper.getLatestUserContent(testUser.id);
     
     await apiHelper.moderateContent(submittedContent.id, {
-      decision: 'calibrated',
+      decision: 'rejected',
       confidence: 0.85,
-      feedback: 'This argument contains a logical fallacy (anecdotal evidence). Local weather events do not disprove global climate trends. Consider reviewing the difference between weather and climate.',
-      tags: ['logical-fallacy', 'anecdotal-evidence', 'needs-calibration'],
+      feedback: 'This argument contains a logical fallacy (anecdotal evidence). Local weather events do not disprove global climate trends.',
+      tags: ['logical-fallacy', 'anecdotal-evidence'],
       suggestions: [
         'Review NOAA climate vs weather resources',
         'Consider global temperature trends rather than local events',
@@ -172,9 +172,9 @@ test.describe('Complete Content Moderation Flow', () => {
     await page.reload();
     await page.click('[data-testid="queue-status"]');
     
-    await expect(page.locator('[data-testid="content-calibrated"]')).toBeVisible();
+    await expect(page.locator('[data-testid="content-rejected"]')).toBeVisible();
     await expect(page.locator('text=logical fallacy')).toBeVisible();
-    await expect(page.locator('text=Consider reviewing the difference')).toBeVisible();
+    await expect(page.locator('text=Local weather events do not disprove')).toBeVisible();
 
     // Content should not be published
     await page.goto('/topics/climate-change');

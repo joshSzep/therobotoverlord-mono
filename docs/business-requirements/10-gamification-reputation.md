@@ -7,8 +7,7 @@ flowchart TD
     A[Content Moderation Event] --> B{Event Type}
     B -->|Post Approved| C[+Points]
     B -->|Post Rejected| D[-Points]
-    B -->|Post Calibrated| E[Neutral/Small +]
-    B -->|Topic Approved| F[+Bonus Points]
+    B -->|Topic Approved| E[+Bonus Points]
     B -->|Appeal Sustained| G[+Recovery Points]
     B -->|Appeal Denied| H[-Penalty Points]
     

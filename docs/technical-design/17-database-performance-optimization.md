@@ -69,8 +69,6 @@ class OptimizedLoyaltyService:
             return base_score
         elif outcome == "rejected":
             return -base_score
-        else:  # calibrated
-            return 0
     
     async def get_loyalty_score(self, user_id: str) -> int:
         """Get current loyalty score with Redis caching"""

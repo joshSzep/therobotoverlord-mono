@@ -87,8 +87,6 @@ class LoyaltyScoreService:
             return base_score
         elif outcome == "rejected":
             return -base_score
-        else:  # calibrated
-            return 0
 ```
 
 ## Algorithm Properties

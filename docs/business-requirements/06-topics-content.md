@@ -22,7 +22,6 @@ flowchart TD
     
     L -->|Approved| M[Topic Goes Live]
     L -->|Rejected| N[Topic Rejected]
-    L -->|Calibrated| O[Return with Feedback]
     
     style D fill:#ff4757,stroke:#fff,color:#fff
     style K fill:#74b9ff,stroke:#fff,color:#fff
@@ -39,8 +38,6 @@ stateDiagram-v2
     Pending --> UnderReview: Enter Queue
     UnderReview --> Approved: Pass Evaluation
     UnderReview --> Rejected: Fail Evaluation
-    UnderReview --> Calibrated: Needs Improvement
-    Calibrated --> Draft: User Edits
     Approved --> Live: Published
     Live --> [*]: Topic Active
     Rejected --> [*]: Sent to Graveyard

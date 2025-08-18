@@ -29,7 +29,6 @@ graph TB
         M --> N{Evaluation Result}
         N -->|Approved| O[Publish Content]
         N -->|Rejected| P[Send to Graveyard]
-        N -->|Calibrated| Q[Return Feedback]
     end
     
     style D fill:#ff4757,stroke:#fff,color:#fff
