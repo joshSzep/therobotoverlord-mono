@@ -32,7 +32,7 @@ erDiagram
     BADGES ||--o{ USER_BADGES : awarded_as
     
     USERS {
-        uuid id PK
+        uuid pk PK
         varchar email UK
         varchar google_id UK
         varchar username
@@ -44,10 +44,10 @@ erDiagram
     }
     
     TOPICS {
-        uuid id PK
+        uuid pk PK
         varchar title
         text description
-        uuid author_id FK
+        uuid author_pk FK
         boolean created_by_overlord
         varchar status
         timestamp approved_at
@@ -55,10 +55,10 @@ erDiagram
     }
     
     POSTS {
-        uuid id PK
-        uuid topic_id FK
-        uuid parent_post_id FK
-        uuid author_id FK
+        uuid pk PK
+        uuid topic_pk FK
+        uuid parent_post_pk FK
+        uuid author_pk FK
         text content
         varchar status
         text overlord_feedback
@@ -67,9 +67,9 @@ erDiagram
     }
     
     PRIVATE_MESSAGES {
-        uuid id PK
-        uuid sender_id FK
-        uuid recipient_id FK
+        uuid pk PK
+        uuid sender_pk FK
+        uuid recipient_pk FK
         text content
         varchar status
         text overlord_feedback
@@ -148,7 +148,7 @@ sequenceDiagram
 
 ```sql
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pk UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL UNIQUE,
     google_id VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL,
@@ -166,14 +166,14 @@ CREATE TABLE users (
 
 ```sql
 CREATE TABLE topics (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pk UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(500) NOT NULL,
     description TEXT NOT NULL,
-    author_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    author_pk UUID REFERENCES users(pk) ON DELETE SET NULL,
     created_by_overlord BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending_approval', 'approved', 'rejected')),
     approved_at TIMESTAMP WITH TIME ZONE,
-    approved_by UUID REFERENCES users(id),
+    approved_by UUID REFERENCES users(pk),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -183,10 +183,10 @@ CREATE TABLE topics (
 
 ```sql
 CREATE TABLE posts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    topic_id UUID NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    parent_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    pk UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    topic_pk UUID NOT NULL REFERENCES topics(pk) ON DELETE CASCADE,
+    parent_post_pk UUID REFERENCES posts(pk) ON DELETE CASCADE,
+    author_pk UUID NOT NULL REFERENCES users(pk) ON DELETE CASCADE,
     content TEXT NOT NULL, -- Canonical English storage only
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
     overlord_feedback TEXT,

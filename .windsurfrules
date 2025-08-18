@@ -1,0 +1,54 @@
+# Windsurf Rules for The Robot Overlord
+
+## Python Import Style Preferences
+
+### Import Organization
+- **One symbol per import statement** - Split multi-symbol imports into separate lines
+- **Import grouping by type** with blank lines between groups:
+  1. Standard library imports
+  2. Third-party imports  
+  3. First-party imports
+- **No section comments** - Group imports visually with blank lines only
+- **Absolute imports only** - Avoid relative imports entirely
+
+### Example Format
+```python
+"""Module docstring."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+from asyncpg import Record
+
+from therobotoverlord_api.database.connection import get_db_connection
+from therobotoverlord_api.database.models.user import User
+```
+
+### Ruff Configuration
+The project uses ruff with these import-related settings in `pyproject.toml`:
+- `split-on-trailing-comma = true` - Enforces one symbol per import
+- `section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]`
+- `known-first-party = ["therobotoverlord_api"]`
+- `lines-between-types = 1` - Blank lines between import groups
+
+## Code Quality Standards
+
+### Type Annotations
+- Use `list[T]` instead of `List[T]` from `typing` module for type annotations
+- Use `dict[K, V]` instead of `Dict[K, V]` from `typing` module for type annotations
+- Use `T | None` instead of `Optional[T]` for nullable parameters
+
+### Database Code
+- Use `# nosec B608` comments for legitimate dynamic SQL queries to suppress bandit warnings
+- Prefer `logger.exception()` over `logger.error()` in exception handlers
+- Use timezone-aware datetime objects (`datetime.now(timezone.utc)`)
+
+### Pydantic Models
+- Include `Config` class with `from_attributes = True` for database models
+- Use `model_validate()` for converting database records to Pydantic models
+
+### General Practices
+- Avoid bare `except` clauses - use `except Exception` instead
+- Use absolute imports exclusively
+- Maintain consistent code formatting with ruff and pre-commit hooks
