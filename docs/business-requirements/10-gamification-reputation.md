@@ -65,7 +65,7 @@ graph TD
 ## Loyalty Score
 
 ### Definition
-Calculated using a proprietary algorithm based on moderation outcomes across all content types. General factors are disclosed to users (approved/rejected post ratios), but specific weights and calculations remain proprietary.
+A citizen's loyalty to the state, calculated using the Robot Overlord's proprietary evaluation algorithm based on moderation outcomes across all content types. Citizens who consistently produce quality arguments that serve the state's interests earn higher loyalty scores. General factors are disclosed to citizens (approved/rejected post ratios), but the Overlord's specific weights and calculations remain classified state secrets.
 
 ### Updates
 Real-time calculation with no caching needed for MVP.

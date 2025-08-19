@@ -62,6 +62,8 @@ erDiagram
         text content
         varchar status
         text overlord_feedback
+        varchar rejection_reason
+        boolean tos_violation
         timestamp submitted_at
         timestamp created_at
     }
@@ -190,6 +192,8 @@ CREATE TABLE posts (
     content TEXT NOT NULL, -- Canonical English storage only
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
     overlord_feedback TEXT,
+    rejection_reason VARCHAR(100), -- 'tos_violation', 'poor_logic', 'poor_tone', 'off_topic'
+    tos_violation BOOLEAN DEFAULT FALSE, -- True if rejected during ToS screening
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Used for chronological display ordering
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

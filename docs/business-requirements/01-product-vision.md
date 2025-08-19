@@ -2,7 +2,7 @@
 
 ## Product Vision
 
-A satirical, AI-moderated debate arena where users, called citizens, argue inside a fictional authoritarian state. The Overlord evaluates every contribution for logic, tone, and relevance. It responds in-character with humor and irony. The visual identity evokes 1960s Soviet propaganda posters. The experience is playful, strict, and consistent.
+A satirical, AI-moderated debate arena where users, called citizens, argue inside a fictional authoritarian state. The Robot Overlord is a humorless, witty judge that evaluates every contribution for logic, tone, and relevance with bureaucratic precision. The visual identity feels like a propaganda poster collided with a pneumatic mail room - deliberately uncomfortable and unsettling. Citizens must navigate this dystopian debate bureaucracy where even their arguments are processed through official channels and judged by an authoritarian AI. The experience should feel slightly uncomfortable - that is the point.
 
 ## Core Ideas
 

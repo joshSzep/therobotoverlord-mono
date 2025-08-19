@@ -64,10 +64,10 @@ sequenceDiagram
 Any rejected public post can be appealed by its author.
 
 ### Submission Process
-Citizens submit appeals via chat with the Overlord.
+Citizens submit appeals via chat with the Robot Overlord, following proper bureaucratic protocol.
 
 ### Confirmation
-Overlord confirms receipt and enters appeal into queue.
+The Robot Overlord confirms receipt with characteristic bureaucratic precision and enters appeal into the state processing queue.
 
 ### Review Process
 Appeals reviewed outside of chat in dedicated dashboard (Phase 4).

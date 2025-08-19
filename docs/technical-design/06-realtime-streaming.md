@@ -24,6 +24,8 @@ class EventType(str, Enum):
     ERROR = "error"
     DONE = "done"
     COMMENTARY = "commentary"
+    TOS_SCREENING = "tos_screening"
+    TOS_VIOLATION = "tos_violation"
 
 class StreamEvent(BaseModel):
     seq: int

@@ -66,7 +66,7 @@ flowchart TD
 - **Anti-spam role**. Can view rejected posts. Can sanction citizens to slow or pause posting. Cannot change roles. Cannot delete accounts. Cannot view private messages. Cannot access citizens' hidden personal information.
 
 ### Citizen
-- Can view and participate in topics. May be eligible to create topics if high-ranked. Can send private messages. Can appeal rejections. Can flag content.
+- Can view and participate in debates under the watchful eye of the Robot Overlord. May be eligible to create topics if they achieve high loyalty ranking and prove their worth to the state. Can send private messages (subject to administrative review). Can appeal rejections through proper bureaucratic channels. Can flag treasonous content for Overlord evaluation.
 
 ### Anonymous Visitor
 - Can browse the application. Can begin composing posts or topics. Must authenticate before submission enters moderation.
@@ -82,6 +82,7 @@ flowchart TD
 | Appeal rejections | - | ✓ | ✓ | ✓ | ✓ |
 | Flag content | - | ✓ | ✓ | ✓ | ✓ |
 | View rejected posts | - | Own only | ✓ | ✓ | ✓ |
+| View posts in evaluation | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Apply sanctions | - | - | ✓ | ✓ | ✓ |
 | Adjudicate appeals | - | - | ✓ | ✓ | ✓ |
 | View private messages | - | Own only | - | ✓ | ✓ |

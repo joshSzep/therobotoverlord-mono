@@ -2,11 +2,15 @@
 
 ## Aesthetic
 
-**1960s propaganda poster energy**. Stark shapes. Bold reds. Off-white paper textures. Heavy display type. Minimal UI chrome.
+**Propaganda poster collided with a pneumatic mail room**. The visual identity should feel deliberately uncomfortable and unsettling - like a dystopian bureaucracy where debates are processed through official channels. 
+
+**1960s Soviet propaganda poster energy** meets industrial mail-sorting machinery. Stark shapes. Bold reds. Off-white paper textures. Heavy display type. Minimal UI chrome. Visual elements should evoke both authoritarian messaging and bureaucratic document processing systems.
 
 ## Copy Tone
 
-**Authoritarian, playful, slightly mocking**. Short sentences. 
+**Authoritarian, playful, slightly mocking**. The Robot Overlord maintains a humorless, witty persona that treats all citizen interactions as official state business. Short sentences. Bureaucratic precision with cutting irony.
+
+**Public spectacle encouraged** - citizens witness posts journey through evaluation in real-time, creating tension, anticipation, and collective reactions to the Overlord's verdicts. 
 
 ### Overlord Voice Examples
 

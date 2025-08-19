@@ -97,14 +97,24 @@ flowchart TD
     C -->|Valid| E[Create Post Record]
     C -->|Invalid| F[400 Bad Request]
     
-    E --> G[Add to Moderation Queue]
-    G --> H[Generate Queue Position]
-    H --> I[WebSocket Notification]
-    I --> J[Return 202 Accepted]
+    E --> G[ToS Violation Screening]
+    G --> H{Safety Check}
+    H -->|Pass| I[Make Post Public]
+    H -->|Fail| J[Immediate Rejection]
     
-    style E fill:#74b9ff,stroke:#fff,color:#fff
+    I --> K[Add to Moderation Queue]
+    K --> L[Generate Queue Position]
+    L --> M[WebSocket Notification]
+    M --> N[Return 202 Accepted]
+    
+    J --> O[Store in Graveyard]
+    O --> P[Update Loyalty Score]
+    P --> Q[Return 400 ToS Violation]
+    
     style G fill:#ff4757,stroke:#fff,color:#fff
     style I fill:#4ecdc4,stroke:#fff,color:#fff
+    style J fill:#2f1b14,stroke:#ff6b6b,color:#fff
+    style K fill:#74b9ff,stroke:#fff,color:#fff
 ```
 
 ## Routing
@@ -134,6 +144,7 @@ class ErrorCode(str, Enum):
     RATE_LIMITED = "RATE_LIMITED"
     VALIDATION_ERROR = "VALIDATION_ERROR"
     INTERNAL_ERROR = "INTERNAL_ERROR"
+    TOS_VIOLATION = "TOS_VIOLATION"
 
 class APIError(BaseModel):
     code: ErrorCode
@@ -168,10 +179,11 @@ class APIResponse(BaseModel):
 
 ### Posts Endpoints (`/api/v1/posts/`)
 
-- `POST /` - Submit new post/reply
+- `POST /` - Submit new post/reply (includes ToS screening)
 - `GET /{post_id}` - Get specific post
-- `POST /{post_id}/appeal` - Appeal rejected post
+- `POST /{post_id}/appeal` - Appeal rejected post (including ToS violations)
 - `POST /{post_id}/flag` - Flag post for review
+- `GET /in-transit` - Get all posts currently in evaluation queues (public endpoint)
 
 ### Public Endpoints
 

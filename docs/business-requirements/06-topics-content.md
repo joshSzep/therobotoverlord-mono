@@ -53,8 +53,10 @@ Citizens can create topics only if they are among the most loyal, as determined 
 
 ## Approval Process
 
+- **Topics become immediately visible to all citizens upon submission** - creating public anticipation as they journey through the Topic Approval Bureau toward the Robot Overlord's judgment.
 - **Fully automatic via Overlord (LLM)**. No manual admin approval required for MVP.
 - Uses same evaluation criteria as posts: logic, tone, relevance.
+- **If rejected**, topics are immediately removed from public view and buried in the creator's private Graveyard.
 
 ## Topic Fields
 

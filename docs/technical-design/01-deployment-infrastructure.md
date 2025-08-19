@@ -95,6 +95,9 @@ Next.js frontend
 
 ### Worker Service
 Dedicated background worker service for async jobs (Arq)
+- **ToS Screening Workers**: Fast content safety processing
+- **Moderation Workers**: Full Robot Overlord evaluation
+- **Queue Processing**: Sequential content processing
 
 ### Database
 Managed PostgreSQL 17 with extensions enabled: `pgvector`, `citext`

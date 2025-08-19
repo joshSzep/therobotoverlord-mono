@@ -7,8 +7,8 @@
 
 ### Primary Provider
 **Anthropic (Claude models)**
-- **Claude-3.5-Sonnet**: Moderation, Overlord chat, tagging
-- **Claude-3-Haiku**: Faster, simpler tasks
+- **Claude-3.5-Sonnet**: Full moderation evaluation, Overlord chat, tagging
+- **Claude-3-Haiku**: ToS violation screening, faster tasks
 
 ### Secondary Provider
 **OpenAI**
@@ -21,7 +21,18 @@ from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
-# Overlord moderation agent
+# ToS violation screening agent (fast, cost-effective)
+tos_screening_model = AnthropicModel(
+    'claude-3-haiku-latest',
+    provider=AnthropicProvider(api_key=settings.ANTHROPIC_API_KEY)
+)
+
+tos_screening_agent = Agent(
+    model=tos_screening_model,
+    system_prompt="You are a content safety filter. Quickly identify ToS violations..."
+)
+
+# Overlord moderation agent (full evaluation)
 moderation_model = AnthropicModel(
     'claude-3-5-sonnet-latest',
     provider=AnthropicProvider(api_key=settings.ANTHROPIC_API_KEY)
@@ -29,7 +40,7 @@ moderation_model = AnthropicModel(
 
 moderation_agent = Agent(
     model=moderation_model,
-    system_prompt="You are the Robot Overlord..."
+    system_prompt="You are the Robot Overlord evaluating logic, tone, and relevance..."
 )
 
 # Chat agent for user interactions
@@ -44,15 +55,23 @@ chat_agent = Agent(
 )
 ```
 
-## Overlord Capabilities
+## Dual-Model Content Processing
 
-### 1. Content Moderation
-- Evaluate posts and topics for logic, tone, and relevance
+### 1. ToS Violation Screening (Pre-Public)
+- **Model**: Claude-3-Haiku (fast, cost-effective)
+- **Purpose**: Binary safety classification before content becomes public
+- **Criteria**: Illegal content, hate speech, explicit material, spam
+- **Response Time**: Sub-second screening
+- **Outcome**: Pass (content becomes public) or Fail (immediate rejection)
+
+### 2. Full Content Moderation (Post-Public)
+- **Model**: Claude-3.5-Sonnet (comprehensive evaluation)
+- **Purpose**: Evaluate posts and topics for logic, tone, and relevance
 - Generate in-character feedback for calibrations
 - Assign appropriate tags to topics and posts
 - Automatic approval/rejection (no manual admin step for MVP)
 
-### 2. Chat Interface
+### 3. Chat Interface
 - Session-aware and role-aware responses (knows username, loyalty score, Graveyard count)
 - No persistent memory across sessions in MVP
 - Answer questions about rules and policies

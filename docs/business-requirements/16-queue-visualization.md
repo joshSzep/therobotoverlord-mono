@@ -2,32 +2,35 @@
 
 ## Concept
 
-Clear, honest communication about queue position and estimated wait times through status cards and Overlord commentary. Replaces complex visualization with transparent, scalable status updates.
+Clear, honest communication about queue position and estimated wait times through status cards and Overlord commentary. **Posts undergo immediate ToS violation screening before becoming public** - only content that passes this checkpoint becomes visible to citizens, creating a safe public spectacle as they journey through the pneumatic tubes toward the Robot Overlord's judgment. Citizens can watch the drama unfold as posts await their fate.
 
 ## Queue System Architecture
 
 ```mermaid
 graph TB
     subgraph "Content Submission"
-        A[User Submits Content] --> B{Content Type?}
-        B -->|Topic| C[Topic Creation Queue]
-        B -->|Post| D[Post Moderation Queue]
-        B -->|Private Message| E[Private Message Queue]
+        A[User Submits Content] --> B[ToS Violation Screening]
+        B --> C{Violates ToS?}
+        C -->|Yes| D[Immediate Rejection]
+        C -->|No| E{Content Type?}
+        E -->|Topic| F[Topic Creation Queue]
+        E -->|Post| G[Post Moderation Queue]
+        E -->|Private Message| H[Private Message Queue]
     end
     
     subgraph "Queue Processing"
-        C --> F[Topic Approval Bureau]
-        D --> G[Debate Moderation Office]
-        E --> H[Private Communication Review]
+        F --> I[Topic Approval Bureau]
+        G --> J[Debate Moderation Office]
+        H --> K[Private Communication Review]
     end
     
     subgraph "Overlord Processing"
-        F --> I[AI Evaluation Engine]
-        G --> I
-        H --> I
-        I --> J{Evaluation Result}
-        J -->|Approved| K[Content Published]
-        J -->|Rejected| L[Content to Graveyard]
+        I --> L[AI Evaluation Engine]
+        J --> L
+        K --> L
+        L --> M{Evaluation Result}
+        M -->|Approved| N[Content Published]
+        M -->|Rejected| O[Content to Graveyard]
     end
     
     subgraph "Real-time Updates"
@@ -119,17 +122,20 @@ Each queue item displays:
 - **Near completion**: "Your reasoning shows promise. Final evaluation in progress..."
 
 ### Context-Aware Messages
-Commentary varies based on queue position, wait time, and submission type while maintaining authoritarian character.
+Commentary varies based on queue position, wait time, and submission type while maintaining authoritarian character. **Citizens watching posts in transit** may also receive commentary about the spectacle unfolding before them.
 
 ## The Overlord's Commentary:
 "Citizen, your submission awaits my divine attention. The queue moves in perfect order - first submitted, first reviewed. No favoritism, no shortcuts, no hidden priorities. Your patience demonstrates loyalty to the fair system I have decreed."
 - **Processing**: "The Committee is now reviewing your proposal. Maintain patience."
 - **Near completion**: "Your reasoning shows promise. Final evaluation in progress..."
 
-### Context-Aware Messages
-Commentary varies based on queue position, wait time, and submission type while maintaining authoritarian character.
+## Public Queue Overview & Spectacle
 
-## Public Queue Overview
+### Live Post Viewing
+- **All submitted posts are immediately visible to all citizens** during their journey through evaluation
+- Citizens can watch posts travel through the pneumatic tube system in real-time
+- **Tension builds** as citizens see posts they agree/disagree with approaching judgment
+- **Public celebrations and disappointments** occur when the Robot Overlord renders verdicts
 
 ### Aggregate Statistics
 - Total items in each queue
@@ -137,7 +143,7 @@ Commentary varies based on queue position, wait time, and submission type while 
 - General processing status without individual details
 
 ### Anonymous Visibility
-All users can see queue lengths and general activity without accessing individual submission details.
+All users can see queue lengths, general activity, and **all posts currently in evaluation** without needing authentication.
 
 ---
 
