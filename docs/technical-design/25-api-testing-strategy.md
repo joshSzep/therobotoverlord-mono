@@ -88,8 +88,8 @@ class UserFactory:
             'role': UserRole.CITIZEN,
             'loyalty_score': 100,
             'rank': 'Loyal Worker',
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow(),
+            'created_at': datetime.now(UTC),
+            'updated_at': datetime.now(UTC),
             'is_active': True
         }
         defaults.update(overrides)
@@ -135,8 +135,8 @@ class ContentFactory:
             'status': ContentStatus.PENDING,
             'moderation_result': None,
             'queue_position': 1,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            'created_at': datetime.now(UTC),
+            'updated_at': datetime.now(UTC)
         }
         defaults.update(overrides)
         return defaults
@@ -156,7 +156,7 @@ class ContentFactory:
             'ai_model': 'claude-3-sonnet',
             'prompt_version': 'v1.2',
             'moderator_id': None,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.now(UTC)
         }
         defaults.update(overrides)
         return defaults
