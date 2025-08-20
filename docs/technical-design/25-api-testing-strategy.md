@@ -81,7 +81,7 @@ class UserFactory:
     def create_user(**overrides) -> Dict[str, Any]:
         """Create test user data with optional overrides."""
         defaults = {
-            'id': f'user-{datetime.now().timestamp()}-{hash(str(overrides))}',
+            'id': f'user-{datetime.now(UTC).timestamp()}-{hash(str(overrides))}',
             'username': f'test_citizen_{hash(str(overrides)) % 10000}',
             'email': f'test{hash(str(overrides)) % 10000}@overlord.com',
             'password_hash': '$2b$12$hashedpassword',
@@ -127,7 +127,7 @@ class ContentFactory:
     def create_content(**overrides) -> Dict[str, Any]:
         """Create test content data with optional overrides."""
         defaults = {
-            'id': f'content-{datetime.now().timestamp()}-{hash(str(overrides))}',
+            'id': f'content-{datetime.now(UTC).timestamp()}-{hash(str(overrides))}',
             'type': ContentType.POST,
             'text': 'This is a well-reasoned test argument with supporting evidence from credible sources.',
             'author_id': 'test-user-123',
@@ -145,7 +145,7 @@ class ContentFactory:
     def create_moderation_decision(**overrides) -> Dict[str, Any]:
         """Create test moderation decision data."""
         defaults = {
-            'id': f'decision-{datetime.now().timestamp()}-{hash(str(overrides))}',
+            'id': f'decision-{datetime.now(UTC).timestamp()}-{hash(str(overrides))}',
             'content_id': 'test-content-123',
             'decision': 'APPROVED',
             'confidence': 0.85,

@@ -89,7 +89,7 @@ class QueueStatusService:
             estimated_minutes=estimated_minutes,
             current_status=self._format_status(queue_entry['status']),
             overlord_commentary=commentary,
-            last_updated=datetime.now()
+            last_updated=datetime.now(UTC)
         )
     
     async def update_queue_positions(self, queue_table: str, queue_identifier: str = None):
@@ -266,7 +266,7 @@ async def get_queue_overview(
     
     return {
         "queues": overview,
-        "last_updated": datetime.now(),
+        "last_updated": datetime.now(UTC),
         "overlord_message": "The Central Committee processes submissions efficiently."
     }
 ```

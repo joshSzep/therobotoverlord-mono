@@ -97,7 +97,7 @@ class PermissionService:
         # Check user-specific permissions first (overrides)
         user_perm = await self.get_user_permission(user_id, permission)
         if user_perm and user_perm.is_active:
-            if not user_perm.expires_at or user_perm.expires_at > datetime.now():
+            if not user_perm.expires_at or user_perm.expires_at > datetime.now(UTC):
                 return True
         
         # Check role-based permissions
