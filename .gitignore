@@ -267,3 +267,6 @@ next-env.d.ts
 
 # Turbo
 .turbo/
+
+# Benchmarks
+.benchmarks/
