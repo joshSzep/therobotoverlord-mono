@@ -51,6 +51,7 @@ dev-web:
 stop:
     @echo "🛑 Stopping all Robot Overlord services..."
     cd therobotoverlord-api && just stop
+    cd therobotoverlord-web && just stop
     @echo "✅ All services stopped"
 
 # === TESTING ===
